@@ -37,14 +37,26 @@ export async function dryRun(
     ],
   });
   await hre.network.provider.send('hardhat_setNextBlockBaseFeePerGas', ['0x0']);
+  await hre.network.provider.request({ method: 'hardhat_setLoggingEnabled', params: [true] });
+
+  const task = new Task(args.id, TaskMode.TEST, args.fork);
+  await registerTaskBuildInfo(hre, task);
 
   const from = deployer === undefined ? undefined : await impersonate(deployer);
   logger.log(`Dry run ${args.id} on ${args.fork}${deployer === undefined ? '' : ` from ${deployer}`}`, '');
 
-  const task = new Task(args.id, TaskMode.TEST, args.fork);
   await task.run({ force: true, from });
   logger.success(`Dry run complete. Addresses written to output/test.json`);
   logger.log(JSON.stringify(task.output(), null, 2), '');
+}
+
+async function registerTaskBuildInfo(hre: HardhatRuntimeEnvironment, task: Task): Promise<void> {
+  for (const buildInfo of task.buildInfos()) {
+    await hre.network.provider.request({
+      method: 'hardhat_addCompilationResult',
+      params: [buildInfo.solcVersion, buildInfo.input, buildInfo.output],
+    });
+  }
 }
 
 function parseDeployer(deployer: string): string {
