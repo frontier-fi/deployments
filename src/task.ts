@@ -605,18 +605,16 @@ export default class Task {
     return object.constructor.name == 'Task';
   }
 
-  private _findTaskId(idAlias: string): string {
-    const matches = Task.getAllTaskIds().filter((taskDirName) => taskDirName.includes(idAlias));
+  private _findTaskId(id: string): string {
+    const matches = Task.getAllTaskIds().filter((taskDirName) => taskDirName === id);
 
     if (matches.length == 1) {
       return matches[0];
     } else {
       if (matches.length == 0) {
-        throw Error(`Found no matching directory for task alias '${idAlias}'`);
+        throw Error(`Found no task with id '${id}'`);
       } else {
-        throw Error(
-          `Multiple matching directories for task alias '${idAlias}', candidates are: \n${matches.join('\n')}`
-        );
+        throw Error(`Multiple tasks with id '${id}', candidates are:\n${matches.join('\n')}`);
       }
     }
   }

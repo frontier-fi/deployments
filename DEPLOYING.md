@@ -125,15 +125,17 @@ This can be done manually by running the `check-deployments` Hardhat task (`yarn
 
 ## Running Tests
 
-Some tasks define fork tests, which consist of creating a local fork from a real network at a given block, running the task on said fork, and then performing tests.
-
-Unlike regular deployments, this requires access to an _archive node_ instead of a regular RPC endpoint. [Alchemy](https://www.alchemy.com/) provides access to these on their free tier. They are configured the same way as [regular deployment endpoints](#prerequisites) (it is possible to simply use the archive endpoint for all purposes, including contract deployment).
-
-Once that is set up, fork tests can be run:
+`yarn test` runs every task on a local fork of each configured network, then runs Mocha files under a task's `test/` directory. Transactions stay on the fork. A task with no Mocha file still runs.
 
 ```bash
 $ yarn test
+$ yarn test --id <task-id>
+$ yarn test --deployer <address>
 ```
+
+The task id is the directory name, such as `20261013-authorizer`. `--id` limits both the fork run and the Mocha files to that task. `--deployer` is the public address impersonated as the transaction sender and funded with 100 ETH on the fork. Omit it and the fork uses Hardhat's built-in account. `--network` selects a live network, so `yarn test` exits when it is set.
+
+The RPC url comes from `~/.hardhat/networks.json`. A private key and an Etherscan API key are not used. Addresses are written to `output/test.json`. That file is the result of the local fork. Each run redeploys, skips explorer verification, and does not record transaction hashes.
 
 ### Writing Fork Tests
 

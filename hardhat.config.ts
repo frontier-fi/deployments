@@ -344,7 +344,10 @@ task(
   }
 });
 
-task(TASK_TEST).addOptionalParam('id', 'Specific task ID of the fork test to run.').setAction(test);
+task(TASK_TEST)
+  .addOptionalParam('id', 'Specific task ID of the fork test to run.')
+  .addOptionalParam('deployer', 'Public address to impersonate as the deployer on the fork.')
+  .setAction(test);
 
 export default {
   typechain: {

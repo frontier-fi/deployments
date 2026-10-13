@@ -2,6 +2,10 @@ import fs from 'fs';
 import path from 'path';
 import { RunSuperFunction, HardhatRuntimeEnvironment, HttpNetworkConfig, HardhatNetworkConfig } from 'hardhat/types';
 
+import { dryRun } from './dryRun';
+import Task from './task';
+import { NETWORKS } from './types';
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 
@@ -28,6 +32,13 @@ function findTaskTests(dir = ''): string[] {
 }
 
 export default async function (args: any, hre: HardhatRuntimeEnvironment, run: RunSuperFunction<any>): Promise<void> {
+  const ids: string[] = args.id ? [args.id] : Task.getAllTaskIds();
+  for (const id of ids) {
+    for (const fork of NETWORKS) {
+      await dryRun({ id, fork, deployer: args.deployer }, hre);
+    }
+  }
+
   if (!args.testFiles?.length) {
     args.testFiles = findTaskTests();
   }
