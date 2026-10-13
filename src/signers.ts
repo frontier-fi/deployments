@@ -13,7 +13,10 @@ export async function getSigner(index = 0): Promise<SignerWithAddress> {
   return (await getSigners())[index];
 }
 
-export async function impersonate(address: string, balance = DEFAULT_IMPERSONATION_BALANCE): Promise<SignerWithAddress> {
+export async function impersonate(
+  address: string,
+  balance = DEFAULT_IMPERSONATION_BALANCE
+): Promise<SignerWithAddress> {
   await impersonateAccount(address);
   await setBalance(address, balance);
 

@@ -4,15 +4,15 @@ runs:
   using: composite
   steps:
     - name: Install node
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v7
       with:
-        node-version: 24.12
+        node-version-file: .nvmrc
     - name: Cache
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       id: cache
       with:
         path: '**/node_modules'
-        key: yarn-v1-${{ hashFiles('**/yarn.lock') }}
+        key: yarn-4-${{ hashFiles('**/yarn.lock') }}
     - name: Install
       run: yarn --immutable
       shell: bash
