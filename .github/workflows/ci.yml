@@ -20,19 +20,6 @@ jobs:
       - name: Lint
         run: yarn lint
 
-  deployments-json:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Generate deployments.json
-        run: python3 src/scripts/parse_readme.py
-
-      - name: Verify generated files are committed
-        run: |
-          git status --porcelain
-          git diff --exit-code -- docs/deployments.json docs/families.txt
-
   test-fork:
     runs-on: ubuntu-latest
     steps:
@@ -70,22 +57,7 @@ jobs:
       - name: Prepare Config
         run: yarn ci:prepare-config
         env:
-          MAINNET_RPC_ENDPOINT: ${{ secrets.MAINNET_RPC_ENDPOINT }}
-          POLYGON_RPC_ENDPOINT: ${{ secrets.POLYGON_RPC_ENDPOINT }}
-          ARBITRUM_RPC_ENDPOINT: ${{ secrets.ARBITRUM_RPC_ENDPOINT }}
-          OPTIMISM_RPC_ENDPOINT: ${{ secrets.OPTIMISM_RPC_ENDPOINT }}
-          BINANCE_RPC_ENDPOINT: ${{ secrets.BINANCE_RPC_ENDPOINT }}
-          GNOSIS_RPC_ENDPOINT: ${{ secrets.GNOSIS_RPC_ENDPOINT }}
-          AVALANCHE_RPC_ENDPOINT: ${{ secrets.AVALANCHE_RPC_ENDPOINT }}
-          BASE_RPC_ENDPOINT: ${{ secrets.BASE_RPC_ENDPOINT }}
-          FRAXTAL_RPC_ENDPOINT: ${{ secrets.FRAXTAL_RPC_ENDPOINT }}
-          MODE_RPC_ENDPOINT: ${{ secrets.MODE_RPC_ENDPOINT }}
-          HYPEREVM_RPC_ENDPOINT: ${{ secrets.HYPEREVM_RPC_ENDPOINT }}
-          PLASMA_RPC_ENDPOINT: ${{ secrets.PLASMA_RPC_ENDPOINT }}
-          XLAYER_RPC_ENDPOINT: ${{ secrets.XLAYER_RPC_ENDPOINT }}
-          MONAD_RPC_ENDPOINT: ${{ secrets.MONAD_RPC_ENDPOINT }}
           SEPOLIA_RPC_ENDPOINT: ${{ secrets.SEPOLIA_RPC_ENDPOINT }}
-          ARBITRUM_SEPOLIA_RPC_ENDPOINT: ${{ secrets.ARBITRUM_SEPOLIA_RPC_ENDPOINT }}
       - name: Test
         run: yarn test --bail
       - name: Save Forked Network Cache

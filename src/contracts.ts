@@ -43,15 +43,12 @@ export async function deploymentTxData(artifact: Artifact, args: Array<Param> = 
 }
 
 export function getArtifact(contract: string): Artifact {
-  let artifactsPath: string;
-  if (!contract.includes('/')) {
-    artifactsPath = path.resolve(Config.default.paths.artifacts);
-  } else {
-    const packageName = `@balancer-labs/${contract.split('/')[0]}`;
-    const packagePath = path.dirname(require.resolve(`${packageName}/package.json`));
-    artifactsPath = `${packagePath}/artifacts`;
-  }
+  const segments = contract.split('/');
+  const contractName = segments[segments.length - 1];
+  const artifactsPath = contract.includes('/')
+    ? `${path.dirname(require.resolve(`${segments[0]}/package.json`))}/artifacts`
+    : path.resolve(Config.default.paths.artifacts);
 
   const artifacts = new Artifacts(artifactsPath);
-  return artifacts.readArtifactSync(contract.split('/').slice(-1)[0]);
+  return artifacts.readArtifactSync(contractName);
 }

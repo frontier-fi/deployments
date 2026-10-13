@@ -1,15 +1,10 @@
 import '@nomicfoundation/hardhat-toolbox';
 import '@nomicfoundation/hardhat-ethers';
 import '@nomicfoundation/hardhat-verify';
-import '@nomiclabs/hardhat-vyper';
 import '@typechain/hardhat';
 import 'hardhat-local-networks-config-plugin';
 import 'hardhat-ignore-warnings';
 import 'tsconfig-paths/register';
-
-import './src/helpers/setupTests';
-import './scripts/hyperevm-big-blocks';
-import './scripts/hyperliquid-bridge';
 
 import { task } from 'hardhat/config';
 import { TASK_TEST } from 'hardhat/builtin-tasks/task-names';
@@ -20,7 +15,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 
 import { checkArtifact, extractArtifact } from './src/artifact';
 import test from './src/test';
-import Task, { TaskMode, TaskStatus } from './src/task';
+import Task, { TaskMode } from './src/task';
 import Verifier from './src/verifier';
 import logger, { Logger } from './src/logger';
 import {
@@ -30,14 +25,7 @@ import {
   getActionIdInfo,
   fetchTheGraphPermissions,
 } from './src/actionId';
-import {
-  checkContractDeploymentAddresses,
-  checkTimelockAuthorizerConfig,
-  getTimelockAuthorizerConfigDiff,
-  saveContractDeploymentAddresses,
-  saveTimelockAuthorizerConfig,
-  withRetries,
-} from './src/network';
+import { checkContractDeploymentAddresses, saveContractDeploymentAddresses, withRetries } from './src/network';
 import { Etherscan } from '@nomicfoundation/hardhat-verify/etherscan';
 import { ApiKey } from '@nomicfoundation/hardhat-verify/types';
 
@@ -356,103 +344,6 @@ task(
   }
 });
 
-task('build-timelock-authorizer-config', `Builds JSON file with Timelock Authorizer configuration`).setAction(
-  async (args: { verbose?: boolean }, hre: HardhatRuntimeEnvironment) => {
-    Logger.setDefaults(false, args.verbose || false);
-
-    if (hre.network.name === 'hardhat') {
-      logger.warn(`invalid network: ${hre.network.name}`);
-      return;
-    }
-
-    // Get active timelock authorizer task.
-    const tasks = Task.getAllTaskIds()
-      .filter((taskId) => taskId.includes('timelock-authorizer'))
-      .map((taskId) => new Task(taskId, TaskMode.READ_ONLY, hre.network.name))
-      .filter((task) => task.getStatus() === TaskStatus.ACTIVE);
-
-    if (tasks.length !== 1) {
-      const errorMsg = tasks.length === 0 ? 'not found' : 'is not unique';
-      logger.error(`Active timelock authorizer task ${errorMsg}`);
-      return;
-    }
-
-    saveTimelockAuthorizerConfig(tasks[0], hre.network.name);
-
-    logger.success(`Timelock Authorizer config JSON generated for network ${hre.network.name}`);
-  }
-);
-
-task(
-  'check-timelock-authorizer-config',
-  `Check whether the existing timelock authorizer configuration file is correct`
-).setAction(async (args: { verbose?: boolean }, hre: HardhatRuntimeEnvironment) => {
-  Logger.setDefaults(false, args.verbose || false);
-
-  if (hre.network.name === 'hardhat') {
-    logger.warn(`invalid network: ${hre.network.name}`);
-    return;
-  }
-
-  // Get active timelock authorizer task.
-  const tasks = Task.getAllTaskIds()
-    .filter((taskId) => taskId.includes('timelock-authorizer'))
-    .map((taskId) => new Task(taskId, TaskMode.READ_ONLY, hre.network.name))
-    .filter((task) => task.getStatus() === TaskStatus.ACTIVE);
-
-  if (tasks.length !== 1) {
-    const errorMsg = tasks.length === 0 ? 'not found' : 'is not unique';
-    logger.error(`Active timelock authorizer task ${errorMsg}`);
-    return;
-  }
-
-  const isConfigOk = checkTimelockAuthorizerConfig(tasks[0], hre.network.name);
-
-  if (isConfigOk) {
-    logger.success(`Timelock Authorizer config JSON is correct for network ${hre.network.name}`);
-  } else {
-    throw new Error(
-      `Timelock Authorizer config file is incorrect for network ${hre.network.name}. Please run 'build-timelock-authorizer-config' to regenerate it`
-    );
-  }
-});
-
-task(
-  'verify-timelock-authorizer-config',
-  `Check whether the existing timelock authorizer configuration file matches the delays configured onchain`
-).setAction(async (args: { verbose?: boolean }, hre: HardhatRuntimeEnvironment) => {
-  Logger.setDefaults(false, args.verbose || false);
-
-  if (hre.network.name === 'hardhat') {
-    logger.warn(`invalid network: ${hre.network.name}`);
-    return;
-  }
-
-  // Get active timelock authorizer task.
-  const tasks = Task.getAllTaskIds()
-    .filter((taskId) => taskId.includes('timelock-authorizer'))
-    .map((taskId) => new Task(taskId, TaskMode.READ_ONLY, hre.network.name))
-    .filter((task) => task.getStatus() === TaskStatus.ACTIVE);
-
-  if (tasks.length !== 1) {
-    const errorMsg = tasks.length === 0 ? 'not found' : 'is not unique';
-    logger.error(`Active timelock authorizer task ${errorMsg}`);
-    return;
-  }
-
-  const configDiff = await getTimelockAuthorizerConfigDiff(tasks[0], hre.network.name);
-
-  if (configDiff.length === 0) {
-    logger.success(`Timelock Authorizer config is correctly applied on-chain for network ${hre.network.name}`);
-  } else {
-    throw new Error(
-      `Timelock Authorizer config file is incorrect for network ${
-        hre.network.name
-      }. Differences found:\n${JSON.stringify(configDiff, null, 2)}`
-    );
-  }
-});
-
 task(TASK_TEST).addOptionalParam('id', 'Specific task ID of the fork test to run.').setAction(test);
 
 export default {
@@ -486,13 +377,9 @@ export default {
       },
     ],
   },
-  vyper: {
-    compilers: [{ version: '0.3.1' }, { version: '0.3.3' }],
-  },
   paths: {
-    artifacts: './src/helpers/.hardhat/artifacts',
-    cache: './src/helpers/.hardhat/cache',
-    sources: './src/helpers/contracts',
+    artifacts: './artifacts',
+    sources: './contracts',
   },
   warnings: {
     '*': {
@@ -501,87 +388,6 @@ export default {
     },
   },
   etherscan: {
-    customChains: [
-      {
-        network: 'zkevm',
-        chainId: 1101,
-        urls: {
-          apiURL: 'https://api-zkevm.polygonscan.com/api',
-          browserURL: 'https://zkevm.polygonscan.com/',
-        },
-      },
-      {
-        network: 'base',
-        chainId: 8453,
-        urls: {
-          apiURL: 'https://api.basescan.org/api',
-          browserURL: 'https://basescan.org/',
-        },
-      },
-      {
-        network: 'fraxtal',
-        chainId: 252,
-        urls: {
-          apiURL: 'https://api.fraxscan.com/api',
-          browserURL: 'https://fraxscan.com/',
-        },
-      },
-      {
-        network: 'mode',
-        chainId: 34443,
-        urls: {
-          apiURL: 'https://api.routescan.io/v2/network/mainnet/evm/34443/etherscan',
-          browserURL: 'https://modescan.io',
-        },
-      },
-      {
-        network: 'avalanche',
-        chainId: 43114,
-        urls: {
-          apiURL: 'https://api.snowscan.xyz/api',
-          browserURL: 'https://snowscan.xyz/',
-        },
-      },
-      {
-        network: 'hyperevm',
-        chainId: 999,
-        urls: {
-          apiURL: 'https://api.etherscan.io/v2/api?chainid=999',
-          browserURL: 'https://hyperevmscan.io/',
-        },
-      },
-      {
-        network: 'plasma',
-        chainId: 9745,
-        urls: {
-          apiURL: 'https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan',
-          browserURL: 'https://plasmascan.to/',
-        },
-      },
-      {
-        network: 'xlayer',
-        chainId: 196,
-        urls: {
-          apiURL: 'https://www.oklink.com/api/v5/explorer/contract/verify-source-code-plugin/xlayer',
-          browserURL: 'https://oklink.com/xlayer',
-        },
-      },
-      {
-        network: 'monad',
-        chainId: 143,
-        urls: {
-          apiURL: 'https://api.etherscan.io/v2/api?chainid=143',
-          browserURL: 'https://monadscan.com/',
-        },
-      },
-      {
-        network: 'arbitrumSepolia',
-        chainId: 421614,
-        urls: {
-          apiURL: 'https://api.etherscan.io/v2/api?chainid=421614',
-          browserURL: 'https://sepolia.arbiscan.io/',
-        },
-      },
-    ],
+    customChains: [],
   },
 };

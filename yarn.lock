@@ -37,97 +37,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@balancer-labs/v2-deployments@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "@balancer-labs/v2-deployments@workspace:."
-  dependencies:
-    "@balancer-labs/v2-interfaces": "npm:latest"
-    "@balancer-labs/v2-solidity-utils": "npm:^3.0.2"
-    "@balancer-labs/v3-interfaces": "npm:latest"
-    "@ethereumjs/common": "npm:^4.4.0"
-    "@ethereumjs/evm": "npm:^3.1.1"
-    "@ethersproject/contracts": "npm:^5.0.0"
-    "@nomicfoundation/hardhat-chai-matchers": "npm:^2.1.2"
-    "@nomicfoundation/hardhat-ethers": "npm:^3.1.3"
-    "@nomicfoundation/hardhat-ignition": "npm:^0.15.16"
-    "@nomicfoundation/hardhat-ignition-ethers": "npm:^0.15.17"
-    "@nomicfoundation/hardhat-network-helpers": "npm:^1.0.6"
-    "@nomicfoundation/hardhat-toolbox": "npm:^6.1.2"
-    "@nomicfoundation/hardhat-verify": "npm:^2.1.1"
-    "@nomiclabs/hardhat-vyper": "npm:^3.0.5"
-    "@openzeppelin/contracts": "npm:@openzeppelin/contracts@^5.0.0"
-    "@solidity-parser/parser": "npm:^0.18.0"
-    "@typechain/ethers-v6": "npm:^0.5.0"
-    "@typechain/hardhat": "npm:^9.0.0"
-    "@types/async-retry": "npm:^1"
-    "@types/chai": "npm:^4"
-    "@types/lodash": "npm:^4.14.186"
-    "@types/lodash.range": "npm:^3.2.7"
-    "@types/mocha": "npm:^10"
-    "@types/node": "npm:^14.14.31"
-    "@types/node-fetch": "npm:^2.6.2"
-    "@typescript-eslint/eslint-plugin": "npm:^8.39.0"
-    "@typescript-eslint/parser": "npm:^8.39.0"
-    async-retry: "npm:^1.3.3"
-    chai: "npm:^4.3.6"
-    chalk: "npm:^4.1.2"
-    decimal.js: "npm:^10.4.3"
-    eslint: "npm:^8.57.0"
-    eslint-plugin-mocha-no-only: "npm:^1.1.1"
-    eslint-plugin-prettier: "npm:^4.2.1"
-    ethereumjs-util: "npm:^7.1.5"
-    ethers: "npm:^6.16.0"
-    graphql: "npm:^16.6.0"
-    graphql-request: "npm:^5.2.0"
-    hardhat: "npm:^2.28.4"
-    hardhat-gas-reporter: "npm:^2.3.0"
-    hardhat-ignore-warnings: "npm:^0.2.12"
-    hardhat-local-networks-config-plugin: "npm:^0.0.6"
-    lodash.range: "npm:^3.2.0"
-    mocha: "npm:^10.2.0"
-    node-fetch: "npm:^3.3.2"
-    prettier: "npm:^2.7.1"
-    prettier-plugin-solidity: "npm:v1.0.0-alpha.59"
-    solhint: "npm:^3.4.1"
-    solhint-plugin-prettier: "npm:^0.0.5"
-    solidity-coverage: "npm:^0.8.17"
-    ts-node: "npm:^10.9.1"
-    tsconfig-paths: "npm:^4.1.2"
-    typechain: "npm:^8.3.0"
-    typescript: "npm:^5.9.3"
-  languageName: unknown
-  linkType: soft
-
-"@balancer-labs/v2-interfaces@npm:0.3.0":
-  version: 0.3.0
-  resolution: "@balancer-labs/v2-interfaces@npm:0.3.0"
-  checksum: 10c0/d1dab058a202e29e72a4cb9716bf4f91f55eebd8211bc45c3d3128fd92ef728d04a29ea378783a250491ca77f99b4d1d58ec414dc31ea98b677beae67fc1ffa2
-  languageName: node
-  linkType: hard
-
-"@balancer-labs/v2-interfaces@npm:latest":
-  version: 0.4.0
-  resolution: "@balancer-labs/v2-interfaces@npm:0.4.0"
-  checksum: 10c0/971e2ab6f89cf9be66af7854e32c17cbdeafba5542e29441d473fd29f6fce6ca340092e5da8e03ea60dad15267fe875cd9cbd8e89f228d75114db8b8694666db
-  languageName: node
-  linkType: hard
-
-"@balancer-labs/v2-solidity-utils@npm:^3.0.2":
-  version: 3.0.2
-  resolution: "@balancer-labs/v2-solidity-utils@npm:3.0.2"
-  dependencies:
-    "@balancer-labs/v2-interfaces": "npm:0.3.0"
-  checksum: 10c0/713a9132726b09ad72eb1f14891d300afc8b8169d7deb3c4c4d001ba07290828102137908ab27ebe3f055a1d9c057277adc4f21661c8d7a40eb9ad53493a8b31
-  languageName: node
-  linkType: hard
-
-"@balancer-labs/v3-interfaces@npm:latest":
-  version: 1.0.0
-  resolution: "@balancer-labs/v3-interfaces@npm:1.0.0"
-  checksum: 10c0/e8a6f48f649bfae21b8d35110da6b0845e1458f350f704e331d3b8453f583f517ff2aa5a5240fc767784bfc775eff4e20bebe2a5ae8e4f846faed8ac7ad19c0e
-  languageName: node
-  linkType: hard
-
 "@colors/colors@npm:1.5.0":
   version: 1.5.0
   resolution: "@colors/colors@npm:1.5.0"
@@ -1055,21 +964,6 @@ __metadata:
     "@nomicfoundation/solidity-analyzer-win32-x64-msvc":
       optional: true
   checksum: 10c0/e4f503e9287e18967535af669ca7e26e2682203c45a34ea85da53122da1dee1278f2b8c76c20c67fadd7c1b1a98eeecffd2cbc136860665e3afa133817c0de54
-  languageName: node
-  linkType: hard
-
-"@nomiclabs/hardhat-vyper@npm:^3.0.5":
-  version: 3.1.2
-  resolution: "@nomiclabs/hardhat-vyper@npm:3.1.2"
-  dependencies:
-    debug: "npm:^4.1.1"
-    fs-extra: "npm:^7.0.1"
-    io-ts: "npm:1.10.4"
-    lodash: "npm:^4.17.11"
-    semver: "npm:^6.3.0"
-  peerDependencies:
-    hardhat: ^2.26.0
-  checksum: 10c0/d84dbcb5fc3539523cc40e5df1ada75919dcffd787f06bf26cee812f596cab6f2356d61721d496868c6645d4a57983291804b2a9f7c0d03154daa4de02a554fb
   languageName: node
   linkType: hard
 
@@ -2689,13 +2583,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"decimal.js@npm:^10.4.3":
-  version: 10.6.0
-  resolution: "decimal.js@npm:10.6.0"
-  checksum: 10c0/07d69fbcc54167a340d2d97de95f546f9ff1f69d2b45a02fd7a5292412df3cd9eb7e23065e532a318f5474a2e1bccf8392fdf0443ef467f97f3bf8cb0477e5aa
-  languageName: node
-  linkType: hard
-
 "deep-eql@npm:^4.0.1, deep-eql@npm:^4.1.3":
   version: 4.1.4
   resolution: "deep-eql@npm:4.1.4"
@@ -2750,6 +2637,61 @@ __metadata:
   checksum: 10c0/58bd06ec20e19529b06f7ad07ddab60e504d9e0faca4bd23079fac2d279c3594334d736508dc350e06e510aba5e22e4594483b3a6562ce7c17dd797f4cc4ad2c
   languageName: node
   linkType: hard
+
+"deployments@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "deployments@workspace:."
+  dependencies:
+    "@ethereumjs/common": "npm:^4.4.0"
+    "@ethereumjs/evm": "npm:^3.1.1"
+    "@ethersproject/contracts": "npm:^5.0.0"
+    "@nomicfoundation/hardhat-chai-matchers": "npm:^2.1.2"
+    "@nomicfoundation/hardhat-ethers": "npm:^3.1.3"
+    "@nomicfoundation/hardhat-ignition": "npm:^0.15.16"
+    "@nomicfoundation/hardhat-ignition-ethers": "npm:^0.15.17"
+    "@nomicfoundation/hardhat-network-helpers": "npm:^1.0.6"
+    "@nomicfoundation/hardhat-toolbox": "npm:^6.1.2"
+    "@nomicfoundation/hardhat-verify": "npm:^2.1.1"
+    "@openzeppelin/contracts": "npm:@openzeppelin/contracts@^5.0.0"
+    "@solidity-parser/parser": "npm:^0.18.0"
+    "@typechain/ethers-v6": "npm:^0.5.0"
+    "@typechain/hardhat": "npm:^9.0.0"
+    "@types/async-retry": "npm:^1"
+    "@types/chai": "npm:^4"
+    "@types/lodash": "npm:^4.14.186"
+    "@types/lodash.range": "npm:^3.2.7"
+    "@types/mocha": "npm:^10"
+    "@types/node": "npm:^14.14.31"
+    "@types/node-fetch": "npm:^2.6.2"
+    "@typescript-eslint/eslint-plugin": "npm:^8.39.0"
+    "@typescript-eslint/parser": "npm:^8.39.0"
+    async-retry: "npm:^1.3.3"
+    chai: "npm:^4.3.6"
+    chalk: "npm:^4.1.2"
+    eslint: "npm:^8.57.0"
+    eslint-plugin-mocha-no-only: "npm:^1.1.1"
+    eslint-plugin-prettier: "npm:^4.2.1"
+    ethers: "npm:^6.16.0"
+    graphql: "npm:^16.6.0"
+    graphql-request: "npm:^5.2.0"
+    hardhat: "npm:^2.28.4"
+    hardhat-gas-reporter: "npm:^2.3.0"
+    hardhat-ignore-warnings: "npm:^0.2.12"
+    hardhat-local-networks-config-plugin: "npm:^0.0.6"
+    lodash.range: "npm:^3.2.0"
+    mocha: "npm:^10.2.0"
+    node-fetch: "npm:^3.3.2"
+    prettier: "npm:^2.7.1"
+    prettier-plugin-solidity: "npm:v1.0.0-alpha.59"
+    solhint: "npm:^3.4.1"
+    solhint-plugin-prettier: "npm:^0.0.5"
+    solidity-coverage: "npm:^0.8.17"
+    ts-node: "npm:^10.9.1"
+    tsconfig-paths: "npm:^4.1.2"
+    typechain: "npm:^8.3.0"
+    typescript: "npm:^5.9.3"
+  languageName: unknown
+  linkType: soft
 
 "diff@npm:^4.0.1":
   version: 4.0.4
@@ -3178,7 +3120,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ethereumjs-util@npm:^7.1.4, ethereumjs-util@npm:^7.1.5":
+"ethereumjs-util@npm:^7.1.4":
   version: 7.1.5
   resolution: "ethereumjs-util@npm:7.1.5"
   dependencies:

@@ -1,6 +1,6 @@
 {
-  "include": ["*/tasks/**/test", "*/tasks/**/index.ts", "*/tasks/**/input.ts", "index.ts", "src", "addresses/**/*.json", "*/tasks/**/artifact/*.json", "*/tasks/**/output/*.json"],
-  "exclude": ["*/tasks/**/output/test.json"],
+  "include": ["{tasks,scripts,deprecated}/**/test/**/*.ts", "{tasks,scripts,deprecated}/**/index.ts", "{tasks,scripts,deprecated}/**/input.ts", "index.ts", "src", "addresses/**/*.json", "{tasks,scripts,deprecated}/**/artifact/*.json", "{tasks,scripts,deprecated}/**/output/*.json"],
+  "exclude": ["{tasks,scripts,deprecated}/**/output/test.json"],
   "files": ["./hardhat.config.ts"],
   "compilerOptions": {
     /* Visit https://aka.ms/tsconfig.json to read more about this file */
@@ -47,7 +47,6 @@
     "moduleResolution": "node" /* Specify module resolution strategy: 'node' (Node.js) or 'classic' (TypeScript pre-1.6). */,
     "baseUrl": "./src",                       /* Base directory to resolve non-absolute module names. */
     "paths": {                                /* A series of entries which re-map imports to lookup locations relative to the 'baseUrl'. */
-      "@helpers/*": ["helpers/*"],
       "@src": ["./index"],
       "@typechain": ["typechain-types//"],
     },

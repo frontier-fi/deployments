@@ -5,7 +5,7 @@ import path from 'path';
 import logger from './logger';
 import { request, gql } from 'graphql-request';
 
-import Task, { TaskMode } from './task';
+import Task from './task';
 
 export const ACTION_ID_DIRECTORY = path.join(__dirname, '../action-ids');
 
@@ -21,7 +21,6 @@ export type ActionIdData = Record<string, string>;
 export type TaskActionIds = Record<string, ContractActionIdData>;
 
 export type ContractActionIdData = {
-  useAdaptor: boolean;
   factoryOutput?: string;
   factoryName?: string;
   actionIds: ActionIdData;
@@ -31,7 +30,6 @@ export type ActionIdInfo = {
   taskId: string;
   contractName: string;
   signature: string;
-  useAdaptor: boolean;
 };
 
 interface TheGraphPermissionEntry {
@@ -63,7 +61,7 @@ export async function saveActionIds(
 ): Promise<void> {
   logger.log(`Generating action IDs for ${contractName} of ${task.id}`, '');
 
-  const { useAdaptor, actionIds } = await getActionIds(task, contractName, factoryOutput, factoryName);
+  const actionIds = await getActionIds(task, contractName, factoryOutput, factoryName);
 
   const actionIdsDir = path.join(ACTION_ID_DIRECTORY, task.network);
   if (!fs.existsSync(actionIdsDir)) fs.mkdirSync(actionIdsDir, { recursive: true });
@@ -75,7 +73,7 @@ export async function saveActionIds(
 
   // Write the new entry.
   newFileContents[task.id] = newFileContents[task.id] ?? {};
-  newFileContents[task.id][contractName] = { useAdaptor, factoryOutput, actionIds, factoryName };
+  newFileContents[task.id][contractName] = { factoryOutput, actionIds, factoryName };
 
   fs.writeFileSync(filePath, JSON.stringify(newFileContents, null, 2));
 }
@@ -85,18 +83,17 @@ export async function checkActionIds(task: Task): Promise<void> {
   if (taskActionIdData === undefined) return;
 
   for (const [contractName, actionIdData] of Object.entries(taskActionIdData)) {
-    const { useAdaptor: expectedUseAdaptor, actionIds: expectedActionIds } = await getActionIds(
+    const expectedActionIds = await getActionIds(
       task,
       contractName,
       actionIdData.factoryOutput,
       actionIdData.factoryName
     );
 
-    const adaptorUsageMatch = actionIdData.useAdaptor === expectedUseAdaptor;
     const actionIdsMatch = Object.entries(expectedActionIds).every(
       ([signature, expectedActionId]) => actionIdData.actionIds[signature] === expectedActionId
     );
-    if (adaptorUsageMatch && actionIdsMatch) {
+    if (actionIdsMatch) {
       logger.success(`Verified recorded action IDs of contract '${contractName}' of task '${task.id}'`);
     } else {
       throw Error(
@@ -122,9 +119,7 @@ export function checkActionIdUniqueness(network: string): void {
   } else {
     for (const [actionId, instances] of Object.entries(duplicateActionIdsMapping)) {
       if (JSON.stringify(instances) === JSON.stringify(expectedDuplicateActionIdsMapping[actionId])) {
-        // We expect some collisions of actionIds for cases where contracts share the same signature,
-        // such as those using the AuthorizerAdaptor. If the collisions *exactly* match those in the
-        // expected list, we can ignore them.
+        // Collisions that exactly match the expected list are ignored.
         continue;
       }
 
@@ -161,7 +156,7 @@ export async function getActionIds(
   contractName: string,
   factoryOutput?: string,
   factoryName?: string
-): Promise<{ useAdaptor: boolean; actionIds: ActionIdData }> {
+): Promise<ActionIdData> {
   const artifact = task.artifact(contractName);
 
   const { ignoredFunctions } = safeReadJsonFile<string[]>(path.join(ACTION_ID_DIRECTORY, 'ignored-functions.json'));
@@ -176,53 +171,34 @@ export async function getActionIds(
     .sort((a, b) => (a.format() < b.format() ? -1 : 1))
     .map((func) => [func.format(), func] as [string, FunctionFragment]); // Sort functions alphabetically.
 
-  const { useAdaptor, actionIdSource } = await getActionIdSource(task, contractName, factoryOutput, factoryName);
-  const actionIds: ActionIdData =
-    actionIdSource === undefined ? {} : await getActionIdsFromSource(contractFunctions, actionIdSource);
+  const actionIdSource = await getActionIdSource(task, contractName, factoryOutput, factoryName);
+  if (actionIdSource === undefined) return {};
 
-  return { useAdaptor, actionIds };
+  return getActionIdsFromSource(contractFunctions, actionIdSource);
 }
 
 /**
- * Returns action ID source and a boolean indicating whether the source is the authorizer adaptor.
- * For V3 contracts, it is tolerable to return undefined as the action ID source for permissionless contracts, as
- * V3 does not interact with the authorizer adaptor at all.
+ * Returns the deployed contract action IDs are read from.
+ * Contracts without getActionId are permissionless and have no action IDs.
  */
 async function getActionIdSource(
   task: Task,
   contractName: string,
   factoryOutput?: string,
   factoryName?: string
-): Promise<{ useAdaptor: boolean; actionIdSource: Contract | undefined }> {
+): Promise<Contract | undefined> {
   const artifact = task.artifact(contractName);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const contractInterface = new Interface(artifact.abi as any);
 
-  // An exception is the V3 vault: Vault and extension actually have `getActionId` implemented in the vault admin.
-  if (task.id === '20241204-v3-vault' && (contractName === 'Vault' || contractName === 'VaultExtension')) {
-    const contract = await task.deployedInstance(contractName);
-    const vaultAdmin = await task.deployedInstance('VaultAdmin');
-    const contractAsAdmin = vaultAdmin.attach(contract.target.toString()) as Contract;
-    return { useAdaptor: false, actionIdSource: contractAsAdmin };
+  if (contractInterface.getFunction('getActionId') === null) return undefined;
+
+  if (factoryOutput) {
+    await checkFactoryOutput(task, contractName, factoryOutput, factoryName);
+    return task.instanceAt(contractName, factoryOutput);
   }
 
-  // Not all contracts use the Authorizer directly for authentication.
-  // Only if it has the `getActionId` function does it use the Authorizer directly.
-  // Contracts without this function either are permissionless or use another method such as the AuthorizerAdaptor.
-  const contractIsAuthorizerAware = contractInterface.getFunction('getActionId') !== null;
-
-  if (contractIsAuthorizerAware) {
-    if (factoryOutput) {
-      await checkFactoryOutput(task, contractName, factoryOutput, factoryName);
-      return { useAdaptor: false, actionIdSource: await task.instanceAt(contractName, factoryOutput) };
-    } else {
-      return { useAdaptor: false, actionIdSource: await task.deployedInstance(contractName) };
-    }
-  } else {
-    const adaptorTask = new Task('20220325-authorizer-adaptor', TaskMode.READ_ONLY, task.network);
-    const actionIdSource = await adaptorTask.optionalDeployedInstance('AuthorizerAdaptor');
-    return { useAdaptor: true, actionIdSource };
-  }
+  return task.deployedInstance(contractName);
 }
 
 async function getActionIdsFromSource(
@@ -247,7 +223,7 @@ function getDuplicateActionIds(actionIdFileContents: Record<string, TaskActionId
       Object.entries(taskData).flatMap(([contractName, contractData]) =>
         Object.entries(contractData.actionIds).map<[string, ActionIdInfo]>(([signature, actionId]) => [
           actionId,
-          { taskId, contractName, signature, useAdaptor: contractData.useAdaptor },
+          { taskId, contractName, signature },
         ])
       )
     )
@@ -298,7 +274,6 @@ export function getActionIdInfo(actionId: string, network: string): ActionIdInfo
       return contracts.map(([contractName, contractData]) => ({
         taskId,
         contractName,
-        useAdaptor: contractData.useAdaptor,
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         signature: Object.entries(contractData.actionIds).find(([, hash]) => hash == actionId)![0],
         actionId,

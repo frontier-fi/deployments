@@ -1,4 +1,4 @@
-# Deploying Balancer Contracts
+# Deploying Contracts
 
 The deployments package aims to provide a robust mechanism to run and verify deployments on multiple networks. This document describes the rationale, what guarantees it provides, and how to create and run deployments.
 
@@ -24,12 +24,12 @@ As part of our development process, we frequently alter the source code of contr
 ## Creating Tasks
 
 To create a new task, these are the recommended steps:
-- Create a new directory named after the task ID in the `tasks` directory
+
+- Create a new directory named after the task ID in `tasks/`
 - Add an entry in the README file with the new task
-- Write appropriate `input.ts` and `index.ts` files, which specify deployment arguments and steps respectively 
+- Write appropriate `input.ts` and `index.ts` files, which specify deployment arguments and steps respectively
 - Populate `build-info` directory with compiled contracts data (see [Generating build info](#generating-build-info) section)
 - Generate artifacts with ABI and bytecode from build info files (see [Generating ABI and bytecode files](#generating-artifact-files-with-abi-and-bytecode) section)
-
 
 Inputs and task instructions are plain TypeScript files that call appropriate functions - there's no DSL. The recommended way to write them is to copy the structure from the `input.ts` and `index.ts` files from a similar task, and then edit those as needed.
 The `output` and `artifact` directories will be automatically generated and populated.
@@ -41,7 +41,8 @@ The build information should be generated on a clean commit, so that it can be v
 ### Generating artifact files with ABI and bytecode
 
 To generate the artifacts from build info files:
-- Copy the generated build info `json` inside `<repo-root>/pkg/<workspace>/artifacts/build-info` to the new `<repo-root>/pkg/deployments/tasks/<task-id>/build-info` directory.
+
+- Copy the generated build info `json` from `artifacts/build-info` to `tasks/<task-id>/build-info`.
 - From the `deployments` workspace, run `extract-artifacts` task using the task ID as parameter. Optionally, the contract name and the target file can be specified if e.g. the contract name doesn't match the file name, or if the contract is present in more than one file with different compilation settings. For example:
 
 ```
@@ -68,10 +69,10 @@ In order to check the `build-info` contents, follow these steps:
 
 ```bash
 $ git checkout <build-info-generation-commit>
-$ cd <contract package> # e.g. pkg/v2-pool-weighted
+$ cd <contract package>
 $ rm -rf artifacts # clean prior builds
 $ yarn hardhat compile
-$ diff artifacts/build-info/<actual-build-info>.json ../deployments/tasks/<task-id>/build-info/<expected-build-info>.json
+$ diff artifacts/build-info/<actual-build-info>.json tasks/<task-id>/build-info/<expected-build-info>.json
 ```
 
 The final `diff` command will produce no output if the build information files match.
@@ -87,53 +88,9 @@ This data is accessed via the [`local-networks-config`](https://www.npmjs.com/pa
 ```json
 {
   "networks": {
-    "mainnet": {
-      "url": "https://mainnet.rpc.endpoint/myAPIKey",
-      "verificationAPIKey": "mainnet-etherscan-API-key"
-    },
-    "polygon": {
-      "url": "https://polygon.rpc.endpoint/myAPIKey",
-      "verificationAPIKey": "polygon-etherscan-API-key"
-    },
-    "arbitrum": {
-      "url": "https://arbitrum.rpc.endpoint/myAPIKey",
-      "verificationAPIKey": "arbitrum-etherscan-API-key"
-    },
-    "optimism": {
-      "url": "https://optimism.rpc.endpoint/myAPIKey",
-      "verificationAPIKey": "optimism-etherscan-API-key"
-    },
-    "gnosis": {
-      "url": "https://gnosis.rpc.endpoint/myAPIKey",
-      "verificationAPIKey": "gnosis-etherscan-API-key"
-    },
-    "bsc": {
-      "url": "https://bsc.rpc.endpoint/myAPIKey",
-      "verificationAPIKey": "bsc-etherscan-API-key"
-    },
-    "avalanche": {
-      "url": "https://avalanche.rpc.endpoint/myAPIKey",
-      "verificationAPIKey": "avalanche-etherscan-API-key"
-    },
-    "zkevm": {
-      "url": "https://zkevm.rpc.endpoint/myAPIKey",
-      "verificationAPIKey": "zkevm-etherscan-API-key"
-    },
-    "base": {
-      "url": "https://base.rpc.endpoint/myAPIKey",
-      "verificationAPIKey": "base-etherscan-API-key"
-    },
-    "fraxtal": {
-      "url": "https://fraxtal.rpc.endpoint/myAPIKey",
-      "verificationAPIKey": "fraxtal-etherscan-API-key"
-    },
-    "mode": {
-      "url": "https://mode.rpc.endpoint/myAPIKey",
-      "verificationAPIKey": "mode-etherscan-API-key"
-    },
-    "hyperevm": {
-      "url": "https://hyperevm.rpc.endpoint/myAPIKey",
-      "verificationAPIKey": "hyperevm-etherscan-API-key"
+    "sepolia": {
+      "url": "https://sepolia.rpc.endpoint/myAPIKey",
+      "verificationAPIKey": "sepolia-etherscan-API-key"
     }
   },
   "defaultConfig": {
@@ -143,6 +100,8 @@ This data is accessed via the [`local-networks-config`](https://www.npmjs.com/pa
   }
 }
 ```
+
+`sepolia` is chain id 11155111. Add another chain in `src/types.ts` (`NETWORKS`), `addresses/.supported-networks.json`, and this file. Chains the verifier does not already know also need an `etherscan.customChains` entry in `hardhat.config.ts`.
 
 ### `deploy`
 
@@ -156,18 +115,7 @@ Deployment addresses will be automatically saved to the appropriate file in the 
 
 Further runs of the task will not attempt to redeploy contracts for which an output already exists: use the `--force` flag to do a redeployment.
 
-This mechanism should work for EVM-equivalent networks, i.e. anywhere the artifact compiled for mainnet can run as is.
-
-### HyperEVM deployment
-
-HyperEVM can reuse the same artifacts as every other network, but it has a [dual-block architecture](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm/dual-block-architecture) with small and large blocks with different gas limits.
-
-Most contracts deployments require large blocks. To target them, the deployer account needs to be setup for it beforehand.
-One possible way to achieve this is through this [web application](https://hyperevm-block-toggle.vercel.app/); connect the deployer address and sign the required messages to use large blocks on deployment.
-
-Other than that, it is required to deposit 10 USDC to hypercore via the [hyperliquid app](https://app.hyperliquid.xyz).
-
-After these two steps are performed, the deployer account is ready to execute the deployment tasks as usual.
+This mechanism should work for EVM-equivalent networks, using the same compiled artifact on each one.
 
 ## Checking Deployments
 

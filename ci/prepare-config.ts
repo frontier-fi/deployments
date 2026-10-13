@@ -7,59 +7,8 @@ const HH_CONFIG_FILENAME = `${homedir()}/.hardhat/networks.json`;
 if (process.env.CI) {
   const content = `{
     "networks": {
-      "mainnet": {
-        "url": "${process.env.MAINNET_RPC_ENDPOINT}"
-      },
-      "polygon": {
-        "url": "${process.env.POLYGON_RPC_ENDPOINT}"
-      },
-      "arbitrum": {
-        "url": "${process.env.ARBITRUM_RPC_ENDPOINT}"
-      },
-      "optimism": {
-        "url": "${process.env.OPTIMISM_RPC_ENDPOINT}"
-      },
-      "gnosis": {
-        "url": "${process.env.GNOSIS_RPC_ENDPOINT}"
-      },
-      "bsc": {
-        "url": "${process.env.BINANCE_RPC_ENDPOINT}"
-      },
-      "avalanche": {
-        "url": "${process.env.AVALANCHE_RPC_ENDPOINT}"
-      },
-      "zkevm": {
-        "url": "${process.env.ZKEVM_RPC_ENDPOINT}"
-      },
       "sepolia": {
         "url": "${process.env.SEPOLIA_RPC_ENDPOINT}"
-      },
-      "zkevm": {
-        "url": "${process.env.ZKEVM_RPC_ENDPOINT}"
-      },
-      "base": {
-        "url": "${process.env.BASE_RPC_ENDPOINT}"
-      },
-      "fraxtal": {
-        "url": "${process.env.FRAXTAL_RPC_ENDPOINT}"
-      },
-      "mode": {
-        "url": "${process.env.MODE_RPC_ENDPOINT}"
-      },
-      "hyperevm": {
-        "url": "${process.env.HYPEREVM_RPC_ENDPOINT}"
-      },
-      "plasma": {
-        "url": "${process.env.PLASMA_RPC_ENDPOINT}"
-      },
-      "xlayer": {
-        "url": "${process.env.XLAYER_RPC_ENDPOINT}"
-      },
-      "monad": {
-        "url": "${process.env.MONAD_RPC_ENDPOINT}"
-      },
-      "arbitrumSepolia": {
-        "url": "${process.env.ARBITRUM_SEPOLIA_RPC_ENDPOINT}"
       }
     },
     "defaultConfig": {

@@ -22,28 +22,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        network: [arbitrum, arbitrumSepolia, avalanche, base, bsc, fraxtal, gnosis, hyperevm, mainnet, mode, optimism, plasma, polygon, sepolia, xlayer]
+        network: [sepolia]
     steps:
       - uses: actions/checkout@v4
       - name: Check ${{ matrix.network }} deployment addresses
         uses: ./.github/actions/check-network-deployments
         env:
-          ARBITRUM_RPC_ENDPOINT: ${{ secrets.ARBITRUM_RPC_ENDPOINT }}
-          ARBITRUM_SEPOLIA_RPC_ENDPOINT: ${{ secrets.ARBITRUM_SEPOLIA_RPC_ENDPOINT }}
-          AVALANCHE_RPC_ENDPOINT: ${{ secrets.AVALANCHE_RPC_ENDPOINT }}
-          BASE_RPC_ENDPOINT: ${{ secrets.BASE_RPC_ENDPOINT }}
-          BINANCE_RPC_ENDPOINT: ${{ secrets.BINANCE_RPC_ENDPOINT }}
-          FRAXTAL_RPC_ENDPOINT: ${{ secrets.FRAXTAL_RPC_ENDPOINT }}
-          GNOSIS_RPC_ENDPOINT: ${{ secrets.GNOSIS_RPC_ENDPOINT }}
-          HYPEREVM_RPC_ENDPOINT: ${{ secrets.HYPEREVM_RPC_ENDPOINT }}
-          MAINNET_RPC_ENDPOINT: ${{ secrets.MAINNET_RPC_ENDPOINT }}
-          MODE_RPC_ENDPOINT: ${{ secrets.MODE_RPC_ENDPOINT }}
-          MONAD_RPC_ENDPOINT: ${{ secrets.MONAD_RPC_ENDPOINT }}
-          OPTIMISM_RPC_ENDPOINT: ${{ secrets.OPTIMISM_RPC_ENDPOINT }}
-          PLASMA_RPC_ENDPOINT: ${{ secrets.PLASMA_RPC_ENDPOINT }}
-          POLYGON_RPC_ENDPOINT: ${{ secrets.POLYGON_RPC_ENDPOINT }}
           SEPOLIA_RPC_ENDPOINT: ${{ secrets.SEPOLIA_RPC_ENDPOINT }}
-          XLAYER_RPC_ENDPOINT: ${{ secrets.XLAYER_RPC_ENDPOINT }}
         with:
           network-name: ${{ matrix.network }}
 
@@ -52,28 +37,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        network: [arbitrum, arbitrumSepolia, avalanche, base, bsc, fraxtal, gnosis, hyperevm, mainnet, mode, optimism, plasma, polygon, sepolia, xlayer]
+        network: [sepolia]
     steps:
       - uses: actions/checkout@v4
       - name: Check ${{ matrix.network }} Action IDs
         uses: ./.github/actions/check-network-action-ids
         env:
-          ARBITRUM_RPC_ENDPOINT: ${{ secrets.ARBITRUM_RPC_ENDPOINT }}
-          ARBITRUM_SEPOLIA_RPC_ENDPOINT: ${{ secrets.ARBITRUM_SEPOLIA_RPC_ENDPOINT }}
-          AVALANCHE_RPC_ENDPOINT: ${{ secrets.AVALANCHE_RPC_ENDPOINT }}
-          BASE_RPC_ENDPOINT: ${{ secrets.BASE_RPC_ENDPOINT }}
-          BINANCE_RPC_ENDPOINT: ${{ secrets.BINANCE_RPC_ENDPOINT }}
-          FRAXTAL_RPC_ENDPOINT: ${{ secrets.FRAXTAL_RPC_ENDPOINT }}
-          GNOSIS_RPC_ENDPOINT: ${{ secrets.GNOSIS_RPC_ENDPOINT }}
-          HYPEREVM_RPC_ENDPOINT: ${{ secrets.HYPEREVM_RPC_ENDPOINT }}
-          MAINNET_RPC_ENDPOINT: ${{ secrets.MAINNET_RPC_ENDPOINT }}
-          MODE_RPC_ENDPOINT: ${{ secrets.MODE_RPC_ENDPOINT }}
-          MONAD_RPC_ENDPOINT: ${{ secrets.MONAD_RPC_ENDPOINT }}
-          OPTIMISM_RPC_ENDPOINT: ${{ secrets.OPTIMISM_RPC_ENDPOINT }}
-          PLASMA_RPC_ENDPOINT: ${{ secrets.PLASMA_RPC_ENDPOINT }}
-          POLYGON_RPC_ENDPOINT: ${{ secrets.POLYGON_RPC_ENDPOINT }}
           SEPOLIA_RPC_ENDPOINT: ${{ secrets.SEPOLIA_RPC_ENDPOINT }}
-          XLAYER_RPC_ENDPOINT: ${{ secrets.XLAYER_RPC_ENDPOINT }}
         with:
           network-name: ${{ matrix.network }}
 
@@ -87,17 +57,6 @@ jobs:
         run: yarn ci:prepare-config
       - name: Check Deployment Address Lookup File
         run: yarn check-address-lookup
-
-  check-timelock-authorizer-config:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up environment
-        uses: ./.github/actions/setup
-      - name: Prepare Config
-        run: yarn ci:prepare-config
-      - name: Check Timelock Authorizer Configuration Files
-        run: yarn check-timelock-authorizer-config
 
   markdown-link-check:
     runs-on: ubuntu-latest

@@ -10,12 +10,11 @@
 - [ ] Artifacts are generated from `build-info`
 - [ ] New task has a working fork test <!-- This implies index and input scripts are correct -->
 - [ ] If this is a factory, the product (e.g., pool) was deployed to testnet and successfully verified
-- [ ] Maxis have been informed of any required governance actions
 
 ## Deprecating old tasks checklist: <!-- Only if applicable -->
 
-- [ ] Old task was moved to `deprecated/` directory
-- [ ] Deployments `README` is updated: old task is moved to the 'deprecated' section, and links are updated with the `deprecated/` prefix
+- [ ] Old task was moved to `deprecated/`
+- [ ] Deployments `README` is updated: old task is moved to the 'deprecated' section, and links point at `deprecated/`
 - [ ] Old task fork test is skipped
 - [ ] Old task `README` is updated with a warning sign, a link to the replacement task and a short description <!-- Explain why it was deprecated -->
 - [ ] Addresses are rebuilt to reflect contract status

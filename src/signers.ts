@@ -1,7 +1,8 @@
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 
 import { impersonateAccount, setBalance as setAccountBalance } from '@nomicfoundation/hardhat-network-helpers';
-import { fp } from './helpers/numbers';
+
+const DEFAULT_IMPERSONATION_BALANCE = 100n * 10n ** 18n;
 
 export async function getSigners(): Promise<SignerWithAddress[]> {
   const { ethers } = await import('hardhat');
@@ -12,7 +13,7 @@ export async function getSigner(index = 0): Promise<SignerWithAddress> {
   return (await getSigners())[index];
 }
 
-export async function impersonate(address: string, balance = fp(100)): Promise<SignerWithAddress> {
+export async function impersonate(address: string, balance = DEFAULT_IMPERSONATION_BALANCE): Promise<SignerWithAddress> {
   await impersonateAccount(address);
   await setBalance(address, balance);
 

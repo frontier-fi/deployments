@@ -28,13 +28,10 @@ import { getTaskActionIds } from './actionId';
 import { getArtifactFromContractOutput } from './artifact';
 import { getSigner } from './signers';
 
-// Maps to ../v2 and ../v3.
-const VERSION_ROOTS = ['v2', 'v3'].map((version) => path.resolve(__dirname, `../${version}`));
-
-// Maps to v2/tasks, v3/tasks, etc.
-const getTasksDir = (versionRoot: string) => path.resolve(versionRoot, 'tasks');
-const getDeprecatedDir = (versionRoot: string) => path.resolve(versionRoot, 'deprecated');
-const getScriptsDir = (versionRoot: string) => path.resolve(versionRoot, 'scripts');
+const ROOT = path.resolve(__dirname, '..');
+const TASKS_DIR = path.resolve(ROOT, 'tasks');
+const DEPRECATED_DIR = path.resolve(ROOT, 'deprecated');
+const SCRIPTS_DIR = path.resolve(ROOT, 'scripts');
 
 export enum TaskMode {
   LIVE, // Deploys and saves outputs
@@ -400,53 +397,13 @@ export default class Task {
   dir(): string {
     if (!this.id) throw Error('Please provide a task deployment ID to run');
 
-    const __dir = (versionRoot: string): string | undefined => {
-      // The task might be deprecated, so it may not exist in the main directory. We first look there, but don't require
-      // that the directory exists.
+    const dirFound = [TASKS_DIR, DEPRECATED_DIR, SCRIPTS_DIR]
+      .map((parent) => this._dirAt(parent, this.id, false))
+      .find((dir) => this._existsDir(dir));
 
-      const nonDeprecatedDir = this._dirAt(getTasksDir(versionRoot), this.id, false);
-      if (this._existsDir(nonDeprecatedDir)) {
-        return nonDeprecatedDir;
-      }
+    if (dirFound !== undefined) return dirFound;
 
-      const deprecatedDir = this._dirAt(getDeprecatedDir(versionRoot), this.id, false);
-      if (this._existsDir(deprecatedDir)) {
-        return deprecatedDir;
-      }
-
-      const scriptsDir = this._dirAt(getScriptsDir(versionRoot), this.id, false);
-      if (this._existsDir(scriptsDir)) {
-        return scriptsDir;
-      }
-
-      return undefined;
-    };
-
-    for (const versionRoot of VERSION_ROOTS) {
-      const dirFound = __dir(versionRoot);
-      if (dirFound !== undefined) {
-        return dirFound;
-      }
-    }
-
-    throw Error(`Could not find a directory at ${VERSION_ROOTS}`);
-  }
-
-  version(): string {
-    const taskDir = this.dir();
-
-    const isSubdir = (parent: string, dir: string) => {
-      const relative = path.relative(parent, dir);
-      return relative && !relative.startsWith('..') && !path.isAbsolute(relative);
-    };
-
-    for (const versionRoot of VERSION_ROOTS) {
-      if (isSubdir(versionRoot, taskDir)) {
-        return path.basename(versionRoot);
-      }
-    }
-
-    throw new Error('Unknown version');
+    throw Error(`Could not find task '${this.id}'`);
   }
 
   buildInfo(fileName: string): BuildInfo {
@@ -539,25 +496,9 @@ export default class Task {
 
   getStatus(): TaskStatus {
     const taskDirectory = this.dir();
-    const __taskStatus = (versionRoot: string): TaskStatus | undefined => {
-      if (taskDirectory === path.join(getTasksDir(versionRoot), this.id)) {
-        return TaskStatus.ACTIVE;
-      } else if (taskDirectory === path.join(getDeprecatedDir(versionRoot), this.id)) {
-        return TaskStatus.DEPRECATED;
-      } else if (taskDirectory === path.join(getScriptsDir(versionRoot), this.id)) {
-        return TaskStatus.SCRIPT;
-      } else {
-        return undefined;
-      }
-    };
-
-    for (const versionRoot of VERSION_ROOTS) {
-      const taskStatus = __taskStatus(versionRoot);
-      if (taskStatus !== undefined) {
-        return taskStatus;
-      }
-    }
-
+    if (taskDirectory === path.join(TASKS_DIR, this.id)) return TaskStatus.ACTIVE;
+    if (taskDirectory === path.join(DEPRECATED_DIR, this.id)) return TaskStatus.DEPRECATED;
+    if (taskDirectory === path.join(SCRIPTS_DIR, this.id)) return TaskStatus.SCRIPT;
     throw new Error('Unknown task status');
   }
 
@@ -681,23 +622,13 @@ export default class Task {
   }
 
   /**
-   * Return all directories inside the top 3 fixed task directories in a flat, sorted array.
+   * Return every task directory under tasks/, deprecated/, and scripts/.
    */
   static getAllTaskIds(): string[] {
-    const __versionTaskIds = (versionRoot: string): string[] => {
-      // Some operating systems may insert hidden files that should not be listed, so we just look for directories when
-      // reading the file system.
-      return [getTasksDir(versionRoot), getDeprecatedDir(versionRoot), getScriptsDir(versionRoot)]
-        .map((dir) => fs.readdirSync(dir).filter((fileName) => fs.lstatSync(path.resolve(dir, fileName)).isDirectory()))
-        .flat()
-        .sort();
-    };
-
-    let taskIds: string[] = [];
-    for (const versionRoot of VERSION_ROOTS) {
-      taskIds = taskIds.concat(__versionTaskIds(versionRoot));
-    }
-
-    return taskIds;
+    // Hidden files are ignored; only directories are task ids.
+    return [TASKS_DIR, DEPRECATED_DIR, SCRIPTS_DIR]
+      .map((dir) => fs.readdirSync(dir).filter((fileName) => fs.lstatSync(path.resolve(dir, fileName)).isDirectory()))
+      .flat()
+      .sort();
   }
 }
