@@ -81,16 +81,17 @@ The final `diff` command will produce no output if the build information files m
 
 ### Prerequisites
 
-Tasks require an EOA private key to sign transactions with, an RPC endpoint to broadcast them, and an Etherscan API key to submit source code for verification.
+Tasks require an RPC endpoint to broadcast transactions and an Etherscan API key to submit source code for verification. The transaction sender is the first account Hardhat exposes for that network. Configure either a private key or a Ledger address in `~/.hardhat/networks.json`.
 
-This data is accessed via the [`local-networks-config`](https://www.npmjs.com/package/hardhat-local-networks-config-plugin) Hardhat plugin, which expects a JSON file to be located at `~/.hardhat/networks.json` with the following contents (replace accordingly):
+This data is accessed via the [`local-networks-config`](https://www.npmjs.com/package/hardhat-local-networks-config-plugin) Hardhat plugin, which expects a JSON file at `~/.hardhat/networks.json` with the following contents (replace accordingly):
 
 ```json
 {
   "networks": {
     "sepolia": {
       "url": "https://sepolia.rpc.endpoint/myAPIKey",
-      "verificationAPIKey": "sepolia-etherscan-API-key"
+      "verificationAPIKey": "sepolia-etherscan-API-key",
+      "ledgerAccounts": ["0xLedgerAddress"]
     }
   },
   "defaultConfig": {
@@ -100,6 +101,10 @@ This data is accessed via the [`local-networks-config`](https://www.npmjs.com/pa
   }
 }
 ```
+
+Use either `accounts` or `ledgerAccounts`. A private key in `accounts` is the first signer, ahead of a Ledger address. With no private key, the first Ledger address is the signer. Omit the field you are not using.
+
+Unlock the Ledger and open the Ethereum app before deploying. Contract deployment prompts for blind signing. `yarn test` does not use these accounts. It forks through the in-process Hardhat network.
 
 `sepolia` is chain id 11155111. Add another chain in `src/types.ts` (`NETWORKS`), `addresses/.supported-networks.json`, and this file. Chains the verifier does not already know also need an `etherscan.customChains` entry in `hardhat.config.ts`.
 
