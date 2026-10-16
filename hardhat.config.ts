@@ -2,11 +2,12 @@ import '@nomicfoundation/hardhat-toolbox';
 import '@nomicfoundation/hardhat-ethers';
 import '@nomicfoundation/hardhat-verify';
 import '@typechain/hardhat';
+import '@nomicfoundation/hardhat-ledger';
 import 'hardhat-local-networks-config-plugin';
 import 'hardhat-ignore-warnings';
 import 'tsconfig-paths/register';
 
-import { task } from 'hardhat/config';
+import { extendConfig, task } from 'hardhat/config';
 import { TASK_TEST } from 'hardhat/builtin-tasks/task-names';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
@@ -28,6 +29,15 @@ import {
 import { checkContractDeploymentAddresses, saveContractDeploymentAddresses, withRetries } from './src/network';
 import { Etherscan } from '@nomicfoundation/hardhat-verify/etherscan';
 import { ApiKey } from '@nomicfoundation/hardhat-verify/types';
+
+extendConfig((config) => {
+  for (const networkName of Object.keys(config.networks)) {
+    const network = config.networks[networkName] as { ledgerAccounts?: string[] };
+    if (network.ledgerAccounts === undefined) {
+      network.ledgerAccounts = [];
+    }
+  }
+});
 
 const THEGRAPHURLS: { [key: string]: string } = {};
 
