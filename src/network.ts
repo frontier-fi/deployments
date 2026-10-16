@@ -28,19 +28,22 @@ export function saveContractDeploymentTransactionHash(
 }
 
 export function getContractDeploymentTransactionHash(deployedAddress: string, network: Network): string {
-  const filePath = path.join(DEPLOYMENT_TXS_DIRECTORY, `${network}.json`);
-  const fileExists = fs.existsSync(filePath) && fs.statSync(filePath).isFile();
-  if (!fileExists) {
-    throw Error(`Could not find file for deployment transaction hashes for network '${network}'`);
-  }
-
-  const deploymentTxs: Record<string, string> = JSON.parse(fs.readFileSync(filePath).toString());
-  const txHash = deploymentTxs[deployedAddress];
+  const txHash = findContractDeploymentTransactionHash(deployedAddress, network);
   if (txHash === undefined) {
     throw Error(`No transaction hash for contract ${deployedAddress} on network '${network}'`);
   }
 
   return txHash;
+}
+
+export function findContractDeploymentTransactionHash(deployedAddress: string, network: Network): string | undefined {
+  const filePath = path.join(DEPLOYMENT_TXS_DIRECTORY, `${network}.json`);
+  const fileExists = fs.existsSync(filePath) && fs.statSync(filePath).isFile();
+  if (!fileExists) return undefined;
+
+  const deploymentTxs: Record<string, string> = JSON.parse(fs.readFileSync(filePath).toString());
+  const needle = deployedAddress.toLowerCase();
+  return Object.entries(deploymentTxs).find(([address]) => address.toLowerCase() === needle)?.[1];
 }
 
 /**
