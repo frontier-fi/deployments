@@ -417,16 +417,15 @@ export default class Task {
     return fs.readdirSync(buildInfoDir).map((fileName) => this.buildInfo(fileName));
   }
 
+  buildInfoAliases(): Record<string, string> | undefined {
+    const aliases = this._read(this._fileAt(this.dir(), 'build-info-aliases.json', false));
+    const entries = Object.entries(aliases);
+    if (entries.length === 0) return undefined;
+    return Object.fromEntries(entries);
+  }
+
   artifact(contractName: string, fileName?: string): Artifact {
-    const buildInfoDir = this._dirAt(this.dir(), 'build-info');
-    fileName = fileName ?? contractName;
-
-    const builds: {
-      [sourceName: string]: { [contractName: string]: CompilerOutputContract };
-    } = this._existsFile(path.join(buildInfoDir, `${fileName}.json`))
-      ? this.buildInfo(fileName).output.contracts
-      : this.buildInfos().reduce((result, info: BuildInfo) => ({ ...result, ...info.output.contracts }), {});
-
+    const builds = this._buildInfoContracts(contractName, fileName ?? contractName);
     const sourceName = Object.keys(builds).find((sourceName) =>
       Object.keys(builds[sourceName]).find((key) => key === contractName)
     );
@@ -536,6 +535,52 @@ export default class Task {
 
     const finalOutput = { ...previousOutput, ...output };
     this._write(taskOutputFile, finalOutput);
+  }
+
+  private _buildInfoContracts(
+    contractName: string,
+    fileName: string
+  ): { [sourceName: string]: { [contractName: string]: CompilerOutputContract } } {
+    const buildInfoDir = this._dirAt(this.dir(), 'build-info');
+    const namedBuildInfo = path.join(buildInfoDir, `${extname(fileName) ? fileName : `${fileName}.json`}`);
+    if (this._existsFile(namedBuildInfo)) return this.buildInfo(fileName).output.contracts;
+
+    const alias = this._buildInfoAlias(fileName);
+    if (alias !== undefined) return this._buildInfoById(alias).output.contracts;
+
+    const matches = this._buildInfosContaining(contractName);
+    if (matches.length === 1) return matches[0].output.contracts;
+    if (matches.length > 1) {
+      throw Error(
+        `Contract '${contractName}' is compiled in more than one build-info: ${matches
+          .map((info) => info.id)
+          .join(', ')}. Add it to build-info-aliases.json.`
+      );
+    }
+
+    return {};
+  }
+
+  private _buildInfoAlias(contractName: string): string | undefined {
+    return this.buildInfoAliases()?.[contractName];
+  }
+
+  private _buildInfoById(id: string): BuildInfo {
+    const byFileName = path.join(this._dirAt(this.dir(), 'build-info'), `${id}.json`);
+    const info = this._existsFile(byFileName)
+      ? this.buildInfo(id)
+      : this.buildInfos().find((candidate) => candidate.id === id);
+    if (info === undefined) throw Error(`Could not find build-info ${id} for task '${this.id}'`);
+    if (info.id !== id) throw Error(`Build-info ${id}.json has id '${info.id}' for task '${this.id}'`);
+    return info;
+  }
+
+  private _buildInfosContaining(contractName: string): BuildInfo[] {
+    return this.buildInfos().filter((info) =>
+      Object.keys(info.output.contracts).some((sourceName) =>
+        Object.keys(info.output.contracts[sourceName]).includes(contractName)
+      )
+    );
   }
 
   private _parseRawInput(rawInput: RawInputKeyValue): Input {
