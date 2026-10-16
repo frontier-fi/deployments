@@ -1,9 +1,12 @@
+import { createHash } from 'crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'fs';
-import { Artifact, CompilerOutputContract } from 'hardhat/types';
+import { Artifact, BuildInfo, CompilerOutputContract } from 'hardhat/types';
 import path from 'path';
 import logger from './logger';
 import Task from './task';
 import fs from 'fs';
+
+const BUILD_INFO_ID = /^[0-9a-f]{32}$/;
 
 /**
  * Extracts the artifact for the matching contract.
@@ -14,15 +17,28 @@ import fs from 'fs';
  */
 export function extractArtifact(task: Task, file?: string, contract?: string): void {
   const buildInfoDirectory = path.resolve(task.dir(), 'build-info');
-  if (existsSync(buildInfoDirectory) && statSync(buildInfoDirectory).isDirectory()) {
-    if (file) {
-      _extractArtifact(task, file, contract);
-    } else {
-      for (const buildInfoFileName of readdirSync(buildInfoDirectory)) {
-        const fileName = path.parse(buildInfoFileName).name;
-        _extractArtifact(task, fileName, contract);
-      }
+  if (!existsSync(buildInfoDirectory) || !statSync(buildInfoDirectory).isDirectory()) return;
+
+  if (file) {
+    _extractArtifact(task, file, contract);
+    return;
+  }
+
+  const aliases = task.buildInfoAliases();
+  if (aliases !== undefined) {
+    const entries = Object.entries(aliases).filter(([name]) => contract === undefined || name === contract);
+    if (contract !== undefined && entries.length === 0) {
+      throw Error(`No build-info alias for contract '${contract}' on task '${task.id}'`);
     }
+    for (const [contractName, id] of entries) {
+      _extractArtifact(task, id, contractName);
+    }
+    return;
+  }
+
+  for (const buildInfoFileName of readdirSync(buildInfoDirectory)) {
+    const fileName = path.parse(buildInfoFileName).name;
+    _extractArtifact(task, fileName, contract);
   }
 }
 
@@ -38,6 +54,8 @@ function _extractArtifact(task: Task, file: string, contract?: string) {
  * @param task - The task for which to check artifact integrity.
  */
 export function checkArtifact(task: Task): void {
+  verifyBuildInfoIds(task);
+
   let readmeLines: string[] = [];
 
   const filePath = path.join(task.dir(), `README.md`);
@@ -92,6 +110,45 @@ function checkReadmeArtifactLink(task: Task, contractName: string, readmeLines: 
 /**
  * Read the saved artifact for the contract `contractName`.
  */
+function verifyBuildInfoIds(task: Task): void {
+  const buildInfoDirectory = path.resolve(task.dir(), 'build-info');
+  if (!existsSync(buildInfoDirectory) || !statSync(buildInfoDirectory).isDirectory()) return;
+
+  for (const fileName of readdirSync(buildInfoDirectory)) {
+    if (!fileName.endsWith('.json')) continue;
+    const info = JSON.parse(readFileSync(path.join(buildInfoDirectory, fileName)).toString()) as BuildInfo;
+    const id = computeBuildInfoId(info);
+    if (id !== info.id) {
+      throw Error(`Build-info ${fileName} of task '${task.id}' has id '${info.id}', computed '${id}'`);
+    }
+
+    const baseName = path.parse(fileName).name;
+    if (BUILD_INFO_ID.test(baseName) && baseName !== info.id) {
+      throw Error(`Build-info file ${fileName} of task '${task.id}' does not match its id '${info.id}'`);
+    }
+    logger.success(`Verified build-info id ${info.id} of task '${task.id}'`);
+  }
+
+  for (const [contractName, id] of Object.entries(task.buildInfoAliases() ?? {})) {
+    const info = task.buildInfos().find((candidate) => candidate.id === id);
+    if (info === undefined) throw Error(`Build-info alias ${contractName} points at missing id '${id}'`);
+    const present = Object.keys(info.output.contracts).some((sourceName) =>
+      Object.keys(info.output.contracts[sourceName]).includes(contractName)
+    );
+    if (!present) throw Error(`Build-info ${id} does not contain contract '${contractName}'`);
+  }
+}
+
+function computeBuildInfoId(info: BuildInfo): string {
+  const json = JSON.stringify({
+    _format: info._format,
+    solcVersion: info.solcVersion,
+    solcLongVersion: info.solcLongVersion,
+    input: info.input,
+  });
+  return createHash('md5').update(Buffer.from(json)).digest('hex');
+}
+
 function readContractArtifact(task: Task, contractName: string): Artifact | null {
   // Read contract ABI from file
   const artifactFilePath = path.resolve(task.dir(), 'artifact', `${contractName}.json`);
