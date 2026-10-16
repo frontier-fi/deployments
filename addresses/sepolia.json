@@ -1,1 +1,11 @@
-{}
+{
+  "20261013-authorizer": {
+    "contracts": [
+      {
+        "name": "Authorizer",
+        "address": "0xEdFdDa22252399BDDAeE8d6D8e93c32cA3c31eeE"
+      }
+    ],
+    "status": "ACTIVE"
+  }
+}
