@@ -6,6 +6,5 @@ The source is [`Authorizer.sol` at `1b23f229`](https://github.com/balancer/balan
 
 ## Useful files
 
+- [Sepolia addresses](./output/sepolia.json)
 - [`Authorizer` artifact](./artifact/Authorizer.json)
-
-Sepolia addresses are written to `output/sepolia.json` when the task is deployed.
