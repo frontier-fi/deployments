@@ -30,8 +30,6 @@ import { checkContractDeploymentAddresses, saveContractDeploymentAddresses, with
 import { Etherscan } from '@nomicfoundation/hardhat-verify/etherscan';
 import { ApiKey } from '@nomicfoundation/hardhat-verify/types';
 
-// Sepolia is added from ~/.hardhat/networks.json after the Ledger plugin's config hook.
-// Its provider throws if ledgerAccounts is missing.
 extendConfig((config) => {
   for (const networkName of Object.keys(config.networks)) {
     const network = config.networks[networkName] as { ledgerAccounts?: string[] };
