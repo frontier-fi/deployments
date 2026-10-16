@@ -40,7 +40,7 @@ function _extractArtifact(task: Task, file: string, contract?: string) {
 export function checkArtifact(task: Task): void {
   let readmeLines: string[] = [];
 
-  const filePath = path.join(task.dir(), `readme.md`);
+  const filePath = path.join(task.dir(), `README.md`);
   const readmeFileExists = fs.existsSync(filePath) && fs.statSync(filePath).isFile();
   if (readmeFileExists) {
     const readmeContents = fs.readFileSync(filePath).toString();
