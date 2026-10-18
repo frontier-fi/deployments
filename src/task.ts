@@ -340,6 +340,11 @@ export default class Task {
       const url = await this._verifier.call(task, name, address, constructorArguments, libs);
       logger.success(`Verified contract ${name} at ${url}`);
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes('Already Verified')) {
+        logger.log(`${name} at ${address} is already verified`, '🟡', 'yellow');
+        return;
+      }
       logger.error(`Failed trying to verify ${name} at ${address}: ${error}`);
     }
   }

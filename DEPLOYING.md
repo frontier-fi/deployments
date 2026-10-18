@@ -110,23 +110,21 @@ Unlock the Ledger and open the Ethereum app before deploying. Contract deploymen
 
 ### `deploy`
 
-Once all prerequisites are met and the task is ready, its contracts can be deployed via the custom `deploy` Hardhat task, which can be run via:
-
 ```bash
-$ yarn hardhat deploy --id <task-id> --network <network>
+$ yarn deploy --id <task-id> --network <network>
 ```
 
-Deployment addresses will be automatically saved to the appropriate file in the tasks's `output` directory, and source code submittted to Etherscan for verification[^1].
+This broadcasts any contract not already listed in `output/<network>.json`, saves its address there, writes the transaction hash to `deployment-txs/<network>.json`, and submits the source for verification[^1]. It then runs `save-action-ids` and `build-address-lookup` for every network. `save-action-ids` reads `getActionId` from each deployed contract and merges the result into `action-ids/<network>/action-ids.json`. `build-address-lookup` rewrites `addresses/<network>.json` from the task outputs.
 
-Further runs of the task will not attempt to redeploy contracts for which an output already exists: use the `--force` flag to do a redeployment.
+The signer is used only when a contract is missing from `output/<network>.json`. A later run that finds the contract there verifies and regenerates the files above without opening it. Pass `--force` to broadcast again.
+
+A contract created by a factory and not listed in the task output is omitted from `save-action-ids`. Record it with `yarn hardhat save-action-ids --network <network> --id <task-id> --name <Contract> --address <address>`.
 
 This mechanism should work for EVM-equivalent networks, using the same compiled artifact on each one.
 
 ## Checking Deployments
 
-The deployments package is able to verify that the addresses found in the `output` directories correspond exactly to a run of the task as described by `index.ts`, using the inputs at `input.ts` and the data from the `build-info` directory.
-
-This can be done manually by running the `check-deployments` Hardhat task (`yarn hardhat check-deployments --network <network>`), but it is also done automatically on CI. Like deployment, [this also requires access to an RPC endpoint](#prerequisites).
+`yarn check` runs `lint`, `check-artifacts`, `check-deployments`, `check-action-ids`, and `check-address-lookup`. `check-deployments` compares each address in `output/<network>.json` to the transaction in `deployment-txs/<network>.json`, using `index.ts`, `input.ts`, and `build-info`. CI runs the same checks. The ones that read the chain need an [RPC endpoint](#prerequisites).
 
 ## Running Tests
 
@@ -146,4 +144,4 @@ The RPC url comes from `~/.hardhat/networks.json`. A private key and an Ethersca
 
 These are fairly involved, as they use a lot of custom utilities related to loading other tasks, impersonating accounts, etc. The suggested way to write them is to copy one for a similar task and then edit as needed.
 
-[^1]: Etherscan verification typically fails the first time a task is run, as some time must pass for the newly deployed bytecode to be indexed by their servers. Running the task again should fix the issue.
+[^1]: If Etherscan has not indexed the bytecode yet, verification fails. Run `yarn deploy` again once it has. If the contract is already verified, the log is a yellow notice and the command continues.
