@@ -6,6 +6,7 @@ import { hexToBytes, Address } from '@ethereumjs/util';
 import { Chain, Common, Hardfork } from '@ethereumjs/common';
 import { EVM } from '@ethereumjs/evm';
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
+import { ContractAlreadyVerifiedError } from '@nomicfoundation/hardhat-verify/internal/errors';
 
 import logger from './logger';
 import Verifier from './verifier';
@@ -334,12 +335,20 @@ export default class Task {
     }
 
     const task = externalTask === undefined ? this : externalTask;
+    const verifier = this._verifier;
+    if (!verifier) return logger.warn('Skipping contract verification, no verifier defined');
 
     try {
-      if (!this._verifier) return logger.warn('Skipping contract verification, no verifier defined');
-      const url = await this._verifier.call(task, name, address, constructorArguments, libs);
+      const url = await verifier.call(task, name, address, constructorArguments, libs);
       logger.success(`Verified contract ${name} at ${url}`);
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (error instanceof ContractAlreadyVerifiedError || message.toLowerCase().includes('already verified')) {
+        const match = await verifier.verificationMatch(address).catch(() => undefined);
+        const detail = match === undefined ? '' : ` (${match})`;
+        logger.log(`${name} at ${address} is already verified${detail}`, '🟡', 'yellow');
+        return;
+      }
       logger.error(`Failed trying to verify ${name} at ${address}: ${error}`);
     }
   }
