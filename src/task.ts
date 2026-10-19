@@ -6,6 +6,7 @@ import { hexToBytes, Address } from '@ethereumjs/util';
 import { Chain, Common, Hardfork } from '@ethereumjs/common';
 import { EVM } from '@ethereumjs/evm';
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
+import { ContractAlreadyVerifiedError } from '@nomicfoundation/hardhat-verify/internal/errors';
 
 import logger from './logger';
 import Verifier from './verifier';
@@ -341,8 +342,10 @@ export default class Task {
       logger.success(`Verified contract ${name} at ${url}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      if (message.includes('Already Verified')) {
-        logger.log(`${name} at ${address} is already verified`, '🟡', 'yellow');
+      if (error instanceof ContractAlreadyVerifiedError || message.toLowerCase().includes('already verified')) {
+        const match = await this._verifier.verificationMatch(address).catch(() => undefined);
+        const detail = match === undefined ? '' : ` (${match})`;
+        logger.log(`${name} at ${address} is already verified${detail}`, '🟡', 'yellow');
         return;
       }
       logger.error(`Failed trying to verify ${name} at ${address}: ${error}`);

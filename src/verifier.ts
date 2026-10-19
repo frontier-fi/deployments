@@ -25,6 +25,31 @@ export default class Verifier {
     this.etherscanInstance = Etherscan.fromChainConfig(_apiKey, _chainConfig);
   }
 
+  // Exact match leaves SimilarMatch empty. A similar match names the other contract.
+  async verificationMatch(address: string): Promise<string | undefined> {
+    const { apiKey, apiUrl, chainId } = this.etherscanInstance;
+    const parameters = new URLSearchParams({
+      apikey: apiKey,
+      module: 'contract',
+      action: 'getsourcecode',
+      address,
+    });
+    if (chainId !== undefined) parameters.set('chainid', String(chainId));
+
+    const url = new URL(apiUrl);
+    url.search = parameters.toString();
+
+    const response = await fetch(url);
+    const json = (await response.json()) as { result?: Array<{ SimilarMatch?: string; SourceCode?: string }> | string };
+    const result = Array.isArray(json.result) ? json.result[0] : undefined;
+    if (result === undefined) return undefined;
+
+    const similar = result.SimilarMatch;
+    if (typeof similar === 'string' && similar !== '') return `similar match of ${similar}`;
+    if (result.SourceCode) return 'exact match';
+    return undefined;
+  }
+
   async call(
     task: Task,
     name: string,
