@@ -424,6 +424,13 @@ export default class Task {
     return Object.fromEntries(entries);
   }
 
+  // Named build-info file, then build-info-aliases.json, then the only compilation that contains the contract.
+  buildInfoForContract(contractName: string): BuildInfo {
+    const info = this._resolveBuildInfo(contractName, contractName);
+    if (info === undefined) throw Error(`Could not find a build info for contract ${contractName}`);
+    return info;
+  }
+
   artifact(contractName: string, fileName?: string): Artifact {
     const builds = this._buildInfoContracts(contractName, fileName ?? contractName);
     const sourceName = Object.keys(builds).find((sourceName) =>
@@ -541,15 +548,19 @@ export default class Task {
     contractName: string,
     fileName: string
   ): { [sourceName: string]: { [contractName: string]: CompilerOutputContract } } {
+    return this._resolveBuildInfo(contractName, fileName)?.output.contracts ?? {};
+  }
+
+  private _resolveBuildInfo(contractName: string, fileName: string): BuildInfo | undefined {
     const buildInfoDir = this._dirAt(this.dir(), 'build-info');
     const namedBuildInfo = path.join(buildInfoDir, `${extname(fileName) ? fileName : `${fileName}.json`}`);
-    if (this._existsFile(namedBuildInfo)) return this.buildInfo(fileName).output.contracts;
+    if (this._existsFile(namedBuildInfo)) return this.buildInfo(fileName);
 
     const alias = this._buildInfoAlias(fileName);
-    if (alias !== undefined) return this._buildInfoById(alias).output.contracts;
+    if (alias !== undefined) return this._buildInfoById(alias);
 
     const matches = this._buildInfosContaining(contractName);
-    if (matches.length === 1) return matches[0].output.contracts;
+    if (matches.length === 1) return matches[0];
     if (matches.length > 1) {
       throw Error(
         `Contract '${contractName}' is compiled in more than one build-info: ${matches
@@ -558,7 +569,7 @@ export default class Task {
       );
     }
 
-    return {};
+    return undefined;
   }
 
   private _buildInfoAlias(contractName: string): string | undefined {

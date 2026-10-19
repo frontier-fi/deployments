@@ -1,9 +1,9 @@
-import { BuildInfo, CompilerInput, Libraries, Network } from 'hardhat/types';
+import { CompilerInput, Libraries, Network } from 'hardhat/types';
 import * as parser from '@solidity-parser/parser';
 import { Etherscan } from '@nomicfoundation/hardhat-verify/etherscan';
 
 import Task from './task';
-import { findContractSourceName, getAllFullyQualifiedNames } from './buildinfo';
+import { findContractSourceName } from './buildinfo';
 import { encodeArguments, sleep } from '@nomicfoundation/hardhat-verify/internal/utilities';
 import {
   extractMatchingContractInformation,
@@ -53,15 +53,7 @@ export default class Verifier {
       this.network.name
     );
 
-    let buildInfos: BuildInfo[];
-    try {
-      // First check if there's a specific file named like this.
-      buildInfos = [task.buildInfo(name)];
-    } catch {
-      // Otherwise search in every file.
-      buildInfos = task.buildInfos();
-    }
-    const buildInfo = this.findBuildInfoWithContract(buildInfos, name);
+    const buildInfo = task.buildInfoForContract(name);
     buildInfo.input = this.trimmedBuildInfoInput(name, buildInfo.input);
 
     const sourceName = findContractSourceName(buildInfo, name);
@@ -107,18 +99,6 @@ export default class Verifier {
     }
 
     throw new Error(`The API responded with an unexpected message: ${verificationStatus.message}`);
-  }
-
-  private findBuildInfoWithContract(buildInfos: BuildInfo[], contractName: string): BuildInfo {
-    const found = buildInfos.find((buildInfo) =>
-      getAllFullyQualifiedNames(buildInfo).some((name) => name.contractName === contractName)
-    );
-
-    if (found === undefined) {
-      throw Error(`Could not find a build info for contract ${contractName}`);
-    } else {
-      return found;
-    }
   }
 
   // Trims the inputs of the build info to only keep imported files, avoiding submitting unnecessary source files for
@@ -168,7 +148,8 @@ export default class Verifier {
     input: CompilerInput,
     previousSourceNames: Set<string>
   ): Set<string> {
-    const ast = parser.parse(input.sources[sourceName].content);
+    // tolerant: Vault.sol names a modifier `transient`, which this parser lexes as a keyword.
+    const ast = parser.parse(input.sources[sourceName].content, { tolerant: true });
     parser.visit(ast, {
       ImportDirective: (node) => {
         // Imported paths might be relative, so we convert them to absolute
