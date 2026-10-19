@@ -1,0 +1,16 @@
+{
+  "sepolia": {
+    "ACTIVE": {
+      "20261013-authorizer": {
+        "Authorizer": "0xEdFdDa22252399BDDAeE8d6D8e93c32cA3c31eeE"
+      },
+      "20261016-vault": {
+        "VaultFactory": "0x2621Def28C3EF11Bd8d5D1670E45B22494fBb54e",
+        "ProtocolFeeController": "0x9497e26dE55Af5C87Da7F4f57EbEbAFF0DDaBc1B",
+        "VaultAdmin": "0x06d62a054D4f18Fa5cCf3C4E893e2cD8878F9007",
+        "VaultExtension": "0xd883460167DB9a68B85ee0A3937b75a2B38d1B8E",
+        "Vault": "0xFF00009C1A83Ec25434522ef355b99e9a70000FF"
+      }
+    }
+  }
+}

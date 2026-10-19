@@ -33,6 +33,7 @@
     "check-action-ids": "yarn execute-for-networks yarn check-network-action-ids {}",
     "extract-artifacts": "hardhat extract-artifacts",
     "build-address-lookup": "yarn execute-for-networks -P 16 hardhat build-address-lookup --network {}",
+    "build-lookup": "ts-node scripts/build-lookup.ts",
     "check-address-lookup": "yarn execute-for-networks -P 16 hardhat check-address-lookup --network {}",
     "save-action-ids": "yarn execute-for-networks yarn save-network-action-ids {}",
     "save-network-action-ids": "hardhat save-action-ids --network",
