@@ -6,6 +6,7 @@ Bytecode for the factory and ProtocolFeeController are from the newer [e1ae7f09]
 
 ## Useful files
 
+- [Sepolia addresses](./output/sepolia.json)
 - [`VaultFactory` artifact](./artifact/VaultFactory.json)
 - [`ProtocolFeeController` artifact](./artifact/ProtocolFeeController.json)
 - [`Vault` artifact](./artifact/Vault.json)
