@@ -10,6 +10,18 @@
         "VaultAdmin": "0x06d62a054D4f18Fa5cCf3C4E893e2cD8878F9007",
         "VaultExtension": "0xd883460167DB9a68B85ee0A3937b75a2B38d1B8E",
         "Vault": "0xFF00009C1A83Ec25434522ef355b99e9a70000FF"
+      },
+      "20261019-batch-router": {
+        "BatchRouter": "0x7D08bc34e444848983227E266F61146A7e935A94"
+      },
+      "20261019-router": {
+        "Router": "0xB3C45499aa0ad2fF5d586E7d473C75d5781c557B"
+      },
+      "20261020-buffer-router": {
+        "BufferRouter": "0xf921Cc4B31417eED5FD1B82B15B8b5549b605630"
+      },
+      "20261020-composite-liquidity-router": {
+        "CompositeLiquidityRouter": "0x96Eb97f030C04A98EF83191d9704e5Ba7836Bf3D"
       }
     }
   }
