@@ -2,12 +2,11 @@ import hre from 'hardhat';
 import { expect } from 'chai';
 import { Contract, ethers } from 'ethers';
 
-import { AAVE, describeForkTest, getForkedNetwork, getSigner, impersonate, Task, TaskMode } from '@src';
+import { AAVE, describeForkTest, getForkedNetwork, getSigner, impersonate, MAX_UINT48, Task, TaskMode } from '@src';
 import { BufferRouterDeployment } from '../input';
 
 // Block after the Vault deployment.
 const FORK_BLOCK = 11940609;
-const MAX_UINT48 = (1n << 48n) - 1n;
 const aave = AAVE.sepolia;
 
 describeForkTest('BufferRouter', 'sepolia', FORK_BLOCK, function () {

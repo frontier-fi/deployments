@@ -4,6 +4,9 @@ import { Network } from './types';
 // https://developers.uniswap.org/docs/protocols/permit2/overview
 export const PERMIT2 = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
 
+// Permit2 stores the allowance expiry as a uint48. Max means the approval does not expire.
+export const MAX_UINT48 = (1n << 48n) - 1n;
+
 // WETH is a different contract on each chain.
 export const WETH: Record<Network, string> = {
   sepolia: '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14',
