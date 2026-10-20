@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 const ADDRESSES_DIR = path.resolve(__dirname, '../addresses');
-const LOOKUP_FILE = 'lookup.json';
+const LOOKUP_FILE = '_lookup.json';
 
 type Deployment = {
   contracts: { name: string; address: string }[];
