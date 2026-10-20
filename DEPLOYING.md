@@ -114,7 +114,7 @@ Unlock the Ledger and open the Ethereum app before deploying. Contract deploymen
 $ yarn deploy --id <task-id> --network <network>
 ```
 
-This broadcasts any contract not already listed in `output/<network>.json`, saves its address there, writes the transaction hash to `deployment-txs/<network>.json`, and submits the source for verification[^1]. It then runs `save-action-ids` and `build-address-lookup` for every network, then `build-lookup`. `save-action-ids` reads `getActionId` from each deployed contract and merges the result into `action-ids/<network>/action-ids.json`. `build-address-lookup` rewrites `addresses/<network>.json` from the task outputs. `build-lookup` writes `addresses/lookup.json` from those files, as `<network>/<status>/<task>/{<Contract>: <address>}`.
+This broadcasts any contract not already listed in `output/<network>.json`, saves its address there, writes the transaction hash to `deployment-txs/<network>.json`, and submits the source for verification[^1]. It then runs `save-action-ids` and `build-address-lookup` for every network, then `build-lookup`. `save-action-ids` reads `getActionId` from each deployed contract and merges the result into `action-ids/<network>/action-ids.json`. `build-address-lookup` rewrites `addresses/<network>.json` from the task outputs. `build-lookup` writes `addresses/_lookup.json` from those files, as `<network>/<status>/<task>/{<Contract>: <address>}`.
 
 The signer is used only when a contract is missing from `output/<network>.json`. A later run that finds the contract there verifies and regenerates the files above without opening it. Pass `--force` to broadcast again.
 
