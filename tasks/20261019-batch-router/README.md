@@ -8,4 +8,5 @@ Bytecode is from [74d7068f](https://github.com/balancer/balancer-v3-monorepo/com
 
 ## Useful files
 
+- [Sepolia addresses](./output/sepolia.json)
 - [`BatchRouter` artifact](./artifact/BatchRouter.json)
