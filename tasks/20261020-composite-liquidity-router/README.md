@@ -6,5 +6,6 @@ The Vault address comes from `20261016-vault`. WETH and Permit2 are existing con
 
 ## Useful Files
 
+- [Sepolia addresses](./output/sepolia.json)
 - [Code](https://github.com/balancer/balancer-v3-monorepo/commit/68cc540d16270044fc4ac6fbdcb24c2cf4fc87bf).
 - [`CompositeLiquidityRouter` artifact](./artifact/CompositeLiquidityRouter.json)
