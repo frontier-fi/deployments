@@ -70,6 +70,8 @@ jobs:
       - name: Install linkspector
         run: npm install -g @umbrelladocs/linkspector
       - name: Check links
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: linkspector check
 env:
   CI: true
