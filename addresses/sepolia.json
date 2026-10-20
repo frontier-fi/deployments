@@ -32,5 +32,41 @@
       }
     ],
     "status": "ACTIVE"
+  },
+  "20261019-batch-router": {
+    "contracts": [
+      {
+        "name": "BatchRouter",
+        "address": "0x7D08bc34e444848983227E266F61146A7e935A94"
+      }
+    ],
+    "status": "ACTIVE"
+  },
+  "20261019-router": {
+    "contracts": [
+      {
+        "name": "Router",
+        "address": "0xB3C45499aa0ad2fF5d586E7d473C75d5781c557B"
+      }
+    ],
+    "status": "ACTIVE"
+  },
+  "20261020-buffer-router": {
+    "contracts": [
+      {
+        "name": "BufferRouter",
+        "address": "0xf921Cc4B31417eED5FD1B82B15B8b5549b605630"
+      }
+    ],
+    "status": "ACTIVE"
+  },
+  "20261020-composite-liquidity-router": {
+    "contracts": [
+      {
+        "name": "CompositeLiquidityRouter",
+        "address": "0x96Eb97f030C04A98EF83191d9704e5Ba7836Bf3D"
+      }
+    ],
+    "status": "ACTIVE"
   }
 }

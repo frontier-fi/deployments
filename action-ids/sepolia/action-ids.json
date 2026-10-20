@@ -59,5 +59,25 @@
     "Vault": {
       "actionIds": {}
     }
+  },
+  "20261019-router": {
+    "Router": {
+      "actionIds": {}
+    }
+  },
+  "20261019-batch-router": {
+    "BatchRouter": {
+      "actionIds": {}
+    }
+  },
+  "20261020-buffer-router": {
+    "BufferRouter": {
+      "actionIds": {}
+    }
+  },
+  "20261020-composite-liquidity-router": {
+    "CompositeLiquidityRouter": {
+      "actionIds": {}
+    }
   }
 }
