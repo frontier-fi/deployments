@@ -10,12 +10,10 @@ Configured networks:
 
 ## Active Deployments
 
-| Description                                   | Task ID                                                  |
-| --------------------------------------------- | -------------------------------------------------------- |
-| Authorizer, access control                    | [`20261013-authorizer`](./tasks/20261013-authorizer)     |
-| Vault, with factory and ProtocolFeeController | [`20261016-vault`](./tasks/20261016-vault)               |
-| Router                                        | [`20261019-router`](./tasks/20261019-router)             |
-| Batch Router                                  | [`20261019-batch-router`](./tasks/20261019-batch-router) |
+| Description                                   | Task ID                                              |
+| --------------------------------------------- | ---------------------------------------------------- |
+| Authorizer                                    | [`20261013-authorizer`](./tasks/20261013-authorizer) |
+| Vault, with factory and ProtocolFeeController | [`20261016-vault`](./tasks/20261016-vault)           |
 
 ## Scripts
 
