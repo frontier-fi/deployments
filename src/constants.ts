@@ -4,6 +4,8 @@ export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 export const ONES_BYTES32 = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
 
+export const ZERO_BYTES32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
+
 // 30-day month. Pause windows are counted in these.
 export const MONTH = 30 * 24 * 60 * 60;
 
