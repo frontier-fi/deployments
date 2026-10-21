@@ -21,6 +21,9 @@ Configured networks:
 | Weighted Pool factory                         | [`20261021-weighted-pool`](./tasks/20261021-weighted-pool)                           |
 | Stable Pool factory                           | [`20261021-stable-pool`](./tasks/20261021-stable-pool)                               |
 | Gyro E-CLP factory                            | [`20261021-gyro-eclp`](./tasks/20261021-gyro-eclp)                                   |
+| Weighted Pool oracle factory                  | [`20261021-weighted-pool-oracle`](./tasks/20261021-weighted-pool-oracle)             |
+| Stable Pool oracle factory                    | [`20261021-stable-pool-oracle`](./tasks/20261021-stable-pool-oracle)                 |
+| Gyro E-CLP oracle factory                     | [`20261021-gyro-eclp-oracle`](./tasks/20261021-gyro-eclp-oracle)                     |
 
 ## Scripts
 

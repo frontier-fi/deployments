@@ -121,5 +121,41 @@
       "factoryOutput": "0xFC498c37fc12cE063385306eDAEDB384916E75f4",
       "actionIds": {}
     }
+  },
+  "20261021-weighted-pool-oracle": {
+    "WeightedLPOracleFactory": {
+      "actionIds": {
+        "create(address,bool,bool,address[])": "0xfacf62a7ccc73f0a94edaa5c5cc89d599753f9c4d65d3369d9ed7361e4de7f56",
+        "disable()": "0xf0cc23598de3c1bba29dae0055992dc8cf252457fdc429191b85faf2c5f2d579"
+      }
+    },
+    "WeightedLPOracle": {
+      "factoryOutput": "0x33D1DA2285Ca09a8Ed9906cc7158fAd476329732",
+      "actionIds": {}
+    }
+  },
+  "20261021-stable-pool-oracle": {
+    "StableLPOracleFactory": {
+      "actionIds": {
+        "create(address,bool,bool,address[])": "0x6a26cb94c744ac99274e4c0553a37857e0ff3e93be2f713512528bc4e9331f14",
+        "disable()": "0x5106b0dc484e04e2b8bc4f510196d2909ae23da26980a9a8c5aa24e4c52dcd49"
+      }
+    },
+    "StableLPOracle": {
+      "factoryOutput": "0xfb89075a1f295de0C417d1e08284BF9Aac841c05",
+      "actionIds": {}
+    }
+  },
+  "20261021-gyro-eclp-oracle": {
+    "EclpLPOracleFactory": {
+      "actionIds": {
+        "create(address,bool,bool,address[])": "0x5e7b4298e034d2c7099b52233460ecf512ecbeffe1c37418ab7aae3804a52294",
+        "disable()": "0x0a7cb71979c40f81399e59e6ea2d3a65c3e93b507bbb4312d6ec6e4d4a75f225"
+      }
+    },
+    "EclpLPOracle": {
+      "factoryOutput": "0x582A99997F4F7F69Ce2aBaF80829E5198Ecf532C",
+      "actionIds": {}
+    }
   }
 }
