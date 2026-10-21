@@ -151,6 +151,24 @@ export function checkActionIdUniqueness(network: string): void {
   }
 }
 
+// Output keys for contracts created by a factory are prefixed with `Mock` (for example `MockWeightedPool`).
+// The artifact and factory names drop that prefix (`WeightedPool`, `WeightedPoolFactory`).
+export function actionIdTarget(
+  task: Task,
+  outputName: string,
+  outputAddress: string
+): { contractName: string; factoryOutput?: string } {
+  try {
+    task.artifact(outputName);
+    return { contractName: outputName };
+  } catch (error) {
+    if (!outputName.startsWith('Mock')) throw error;
+    const contractName = outputName.slice('Mock'.length);
+    task.artifact(contractName);
+    return { contractName, factoryOutput: outputAddress };
+  }
+}
+
 export async function getActionIds(
   task: Task,
   contractName: string,
@@ -249,7 +267,15 @@ async function checkFactoryOutput(task: Task, contractName: string, factoryOutpu
   factoryName = factoryName ?? `${contractName}Factory`;
 
   const factory = await task.deployedInstance(factoryName);
-  if (!(await factory.isPoolFromFactory(factoryOutput))) {
+  const checker = factory.interface.getFunction('isPoolFromFactory')
+    ? 'isPoolFromFactory'
+    : factory.interface.getFunction('isOracleFromFactory')
+    ? 'isOracleFromFactory'
+    : undefined;
+  if (checker === undefined) {
+    throw Error(`${factoryName} has no isPoolFromFactory or isOracleFromFactory`);
+  }
+  if (!(await factory[checker](factoryOutput))) {
     throw Error(`The contract at ${factoryOutput} is not an instance of a ${contractName} coming from ${factoryName}`);
   }
 }
