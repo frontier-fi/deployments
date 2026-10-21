@@ -8,5 +8,6 @@ export * from './types';
 export * from './network';
 export * from './contracts';
 export * from './constants';
+export * from './pool';
 
 export { default as Task } from './task';
