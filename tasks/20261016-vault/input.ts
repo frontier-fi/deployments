@@ -1,4 +1,4 @@
-import { Task, TaskMode } from '@src';
+import { MONTH, Task, TaskMode } from '@src';
 
 export type VaultFactoryDeployment = {
   Authorizer: string;
@@ -15,8 +15,6 @@ export type VaultFactoryDeployment = {
   InitialGlobalProtocolSwapFee: bigint;
   InitialGlobalProtocolYieldFee: bigint;
 };
-
-const MONTH = 30 * 24 * 60 * 60;
 
 const Authorizer = new Task('20261013-authorizer', TaskMode.READ_ONLY);
 const Vault = new Task('20261016-vault', TaskMode.READ_ONLY);
