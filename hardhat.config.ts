@@ -20,6 +20,7 @@ import Task, { TaskMode } from './src/task';
 import Verifier from './src/verifier';
 import logger, { Logger } from './src/logger';
 import {
+  actionIdTarget,
   checkActionIds,
   checkActionIdUniqueness,
   saveActionIds,
@@ -233,8 +234,9 @@ task('save-action-ids', `Print the action IDs for a particular contract and chec
                 const fileContents = JSON.parse(readFileSync(outputFilePath).toString());
                 const contractNames = Object.keys(fileContents);
 
-                for (const contractName of contractNames) {
-                  await saveActionIds(task, contractName);
+                for (const outputName of contractNames) {
+                  const { contractName, factoryOutput } = actionIdTarget(task, outputName, fileContents[outputName]);
+                  await saveActionIds(task, contractName, factoryOutput);
                 }
               }
             }
