@@ -79,5 +79,47 @@
     "CompositeLiquidityRouter": {
       "actionIds": {}
     }
+  },
+  "20261021-weighted-pool": {
+    "WeightedPoolFactory": {
+      "actionIds": {
+        "create(string,string,(address,uint8,address,bool)[],uint256[],(address,address,address),uint256,address,bool,bool,bytes32)": "0xf8b9e826967c5156a0d85adca0e06161c2b60aa568e77366fd8f89cdfb908069",
+        "disable()": "0xe7dd408777f4f2239b99798f48658c81f0f5fb3b94a406b0f00858b36b04680a"
+      }
+    },
+    "WeightedPool": {
+      "factoryOutput": "0x0D85b09e1611Da470B3891ffDeB21e285aD2e9a6",
+      "actionIds": {}
+    }
+  },
+  "20261021-stable-pool": {
+    "StablePoolFactory": {
+      "actionIds": {
+        "create(string,string,(address,uint8,address,bool)[],uint256,(address,address,address),uint256,address,bool,bool,bytes32)": "0x03517ab34bcfcd0c40e67031e6686a27ea9ae356a265ee04e3c22fdebbc36b11",
+        "disable()": "0x8a9db3123a3242a6abcb7a4be89f825b2c18c245d2514fbff1ec7edf4dca5a31"
+      }
+    },
+    "StablePool": {
+      "factoryOutput": "0xA6E4D33c03d7193063D8E9475dE7b756b0377cBA",
+      "actionIds": {
+        "emitApproval(address,address,uint256)": "0xc3d0e75d1539727946816233a4e1d4b8113dc73e9a116b6b6743c98b60a49cfc",
+        "emitTransfer(address,address,uint256)": "0x3a8337fa55dd8cb277fcbe5f1bb4e94a2866e724241bbbacc931b1f898ceea86",
+        "incrementNonce()": "0xde23af3e3f60239a08a9c4b760649ec673673ce12f4aef4e7fc4c02d34a9e6ae",
+        "startAmplificationParameterUpdate(uint256,uint256)": "0xd577be901ef63341f8e2ee43058a43277f17b62242f746e8a441055e3b05ae1a",
+        "stopAmplificationParameterUpdate()": "0x17554fe4bbba7a767283f8fd3b156d8c3f1bf7a8f5a8c2e1143e80f06e200d43"
+      }
+    }
+  },
+  "20261021-gyro-eclp": {
+    "GyroECLPPoolFactory": {
+      "actionIds": {
+        "create(string,string,(address,uint8,address,bool)[],(int256,int256,int256,int256,int256),((int256,int256),(int256,int256),int256,int256,int256,int256,int256),(address,address,address),uint256,address,bool,bool,bytes32)": "0x987a8b61ca83a634c4514ca34f71dbfaa2d76e0ef519772faca624f39fa578bd",
+        "disable()": "0x924484a20d7f88f88c03bfcf75ba0a678bfc2140504784c9a80d2459f0a44abc"
+      }
+    },
+    "GyroECLPPool": {
+      "factoryOutput": "0xFC498c37fc12cE063385306eDAEDB384916E75f4",
+      "actionIds": {}
+    }
   }
 }
