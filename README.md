@@ -18,6 +18,9 @@ Configured networks:
 | Batch Router                                  | [`20261019-batch-router`](./tasks/20261019-batch-router)                             |
 | Buffer Router                                 | [`20261020-buffer-router`](./tasks/20261020-buffer-router)                           |
 | Composite Liquidity Router                    | [`20261020-composite-liquidity-router`](./tasks/20261020-composite-liquidity-router) |
+| Weighted Pool factory                         | [`20261021-weighted-pool`](./tasks/20261021-weighted-pool)                           |
+| Stable Pool factory                           | [`20261021-stable-pool`](./tasks/20261021-stable-pool)                               |
+| Gyro E-CLP factory                            | [`20261021-gyro-eclp`](./tasks/20261021-gyro-eclp)                                   |
 
 ## Scripts
 
