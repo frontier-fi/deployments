@@ -24,13 +24,22 @@ export function sepoliaWethUsdc(): PoolTokenConfig[] {
     .map((token) => ({ token, tokenType: 0, rateProvider: ZERO_ADDRESS, paysYieldFees: false }));
 }
 
-export function poolCreatedAddress(factory: Contract, receipt: TransactionReceipt | null): string {
-  if (receipt === null) throw new Error('Pool creation transaction was not mined');
+export function createdAddress(
+  factory: Contract,
+  receipt: TransactionReceipt | null,
+  eventName: string,
+  argName: string
+): string {
+  if (receipt === null) throw new Error('Transaction was not mined');
   const factoryAddress = factory.target.toString().toLowerCase();
   for (const log of receipt.logs) {
     if (log.address.toLowerCase() !== factoryAddress) continue;
     const parsed = factory.interface.parseLog(log);
-    if (parsed?.name === 'PoolCreated') return parsed.args.pool;
+    if (parsed?.name === eventName) return parsed.args[argName];
   }
-  throw new Error('PoolCreated was not emitted');
+  throw new Error(`${eventName} was not emitted`);
+}
+
+export function poolCreatedAddress(factory: Contract, receipt: TransactionReceipt | null): string {
+  return createdAddress(factory, receipt, 'PoolCreated', 'pool');
 }

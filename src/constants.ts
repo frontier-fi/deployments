@@ -9,6 +9,8 @@ export const ZERO_BYTES32 = '0x0000000000000000000000000000000000000000000000000
 // 30-day month. Pause windows are counted in these.
 export const MONTH = 30 * 24 * 60 * 60;
 
+export const HOUR = 60 * 60;
+
 // Canonical Permit2. Same address on every chain except for zkSync.
 // https://developers.uniswap.org/docs/protocols/permit2/overview
 export const PERMIT2 = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
@@ -24,6 +26,11 @@ export const WETH: Record<Network, string> = {
 // Circle USDC. Distinct from the Aave test USDC.
 export const USDC: Record<Network, string> = {
   sepolia: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
+};
+
+// Balancer's constant price feed on Sepolia. It always returns 1, which is enough for a mock oracle.
+export const CONSTANT_PRICE_FEED: Record<Network, string> = {
+  sepolia: '0x1074d0962656768E2b97a0ce39d8c6CCcfBb73b3',
 };
 
 // Aave v3. The static aToken is the ERC4626 whose asset is Aave USDC.
