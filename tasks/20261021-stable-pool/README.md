@@ -10,5 +10,6 @@ Bytecode is from [25d73b3d](https://github.com/balancer/balancer-v3-monorepo/com
 
 ## Useful files
 
+- [Sepolia addresses](./output/sepolia.json)
 - [`StablePoolFactory` artifact](./artifact/StablePoolFactory.json)
 - [`StablePool` artifact](./artifact/StablePool.json)
