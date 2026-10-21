@@ -27,13 +27,25 @@
         "GyroECLPPoolFactory": "0xED6D268cAdBea94c34E531C3401d41a882D66A8D",
         "MockGyroECLPPool": "0xFC498c37fc12cE063385306eDAEDB384916E75f4"
       },
+      "20261021-gyro-eclp-oracle": {
+        "EclpLPOracleFactory": "0x38c0CD8D4A868c7123E0E2eC1C0fAD8614E1E1D9",
+        "MockEclpLPOracle": "0x582A99997F4F7F69Ce2aBaF80829E5198Ecf532C"
+      },
       "20261021-stable-pool": {
         "StablePoolFactory": "0xB74Fe587fad28adbf152b511E199665D56D40755",
         "MockStablePool": "0xA6E4D33c03d7193063D8E9475dE7b756b0377cBA"
       },
+      "20261021-stable-pool-oracle": {
+        "StableLPOracleFactory": "0xB60578a04b839Bb22974D377d3BEC5abAE52362F",
+        "MockStableLPOracle": "0xfb89075a1f295de0C417d1e08284BF9Aac841c05"
+      },
       "20261021-weighted-pool": {
         "WeightedPoolFactory": "0xC55Ea8a9de28CEDd9Eb1384CecD0D0437B71aB9a",
         "MockWeightedPool": "0x0D85b09e1611Da470B3891ffDeB21e285aD2e9a6"
+      },
+      "20261021-weighted-pool-oracle": {
+        "WeightedLPOracleFactory": "0x5f3B2aEDF750372C784e2b5ab8A52Dc46273972d",
+        "MockWeightedLPOracle": "0x33D1DA2285Ca09a8Ed9906cc7158fAd476329732"
       }
     }
   }

@@ -82,6 +82,19 @@
     ],
     "status": "ACTIVE"
   },
+  "20261021-gyro-eclp-oracle": {
+    "contracts": [
+      {
+        "name": "EclpLPOracleFactory",
+        "address": "0x38c0CD8D4A868c7123E0E2eC1C0fAD8614E1E1D9"
+      },
+      {
+        "name": "MockEclpLPOracle",
+        "address": "0x582A99997F4F7F69Ce2aBaF80829E5198Ecf532C"
+      }
+    ],
+    "status": "ACTIVE"
+  },
   "20261021-stable-pool": {
     "contracts": [
       {
@@ -95,6 +108,19 @@
     ],
     "status": "ACTIVE"
   },
+  "20261021-stable-pool-oracle": {
+    "contracts": [
+      {
+        "name": "StableLPOracleFactory",
+        "address": "0xB60578a04b839Bb22974D377d3BEC5abAE52362F"
+      },
+      {
+        "name": "MockStableLPOracle",
+        "address": "0xfb89075a1f295de0C417d1e08284BF9Aac841c05"
+      }
+    ],
+    "status": "ACTIVE"
+  },
   "20261021-weighted-pool": {
     "contracts": [
       {
@@ -104,6 +130,19 @@
       {
         "name": "MockWeightedPool",
         "address": "0x0D85b09e1611Da470B3891ffDeB21e285aD2e9a6"
+      }
+    ],
+    "status": "ACTIVE"
+  },
+  "20261021-weighted-pool-oracle": {
+    "contracts": [
+      {
+        "name": "WeightedLPOracleFactory",
+        "address": "0x5f3B2aEDF750372C784e2b5ab8A52Dc46273972d"
+      },
+      {
+        "name": "MockWeightedLPOracle",
+        "address": "0x33D1DA2285Ca09a8Ed9906cc7158fAd476329732"
       }
     ],
     "status": "ACTIVE"
