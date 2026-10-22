@@ -1,6 +1,6 @@
 import { Contract, TransactionReceipt } from 'ethers';
 
-import { NO_POOL_ROLES, sepoliaWethUsdc, SWAP_FEE, ZERO_ADDRESS } from '@src';
+import { gasLimitForDeployedCode, NO_POOL_ROLES, sepoliaWethUsdc, SWAP_FEE, ZERO_ADDRESS } from '@src';
 
 export const MOCK_WEIGHTED_POOL = {
   name: 'DO NOT USE - Mock Weighted Pool',
@@ -9,20 +9,20 @@ export const MOCK_WEIGHTED_POOL = {
 };
 
 export async function createMockWeightedPool(factory: Contract, salt: string): Promise<TransactionReceipt> {
-  const receipt = await (
-    await factory.create(
-      MOCK_WEIGHTED_POOL.name,
-      MOCK_WEIGHTED_POOL.symbol,
-      sepoliaWethUsdc(),
-      MOCK_WEIGHTED_POOL.normalizedWeights,
-      NO_POOL_ROLES,
-      SWAP_FEE,
-      ZERO_ADDRESS,
-      false,
-      false,
-      salt
-    )
-  ).wait();
+  const args = [
+    MOCK_WEIGHTED_POOL.name,
+    MOCK_WEIGHTED_POOL.symbol,
+    sepoliaWethUsdc(),
+    MOCK_WEIGHTED_POOL.normalizedWeights,
+    NO_POOL_ROLES,
+    SWAP_FEE,
+    ZERO_ADDRESS,
+    false,
+    false,
+    salt,
+  ] as const;
+  const gasLimit = await gasLimitForDeployedCode(factory, factory.interface.encodeFunctionData('create', [...args]));
+  const receipt = await (await factory.create(...args, { gasLimit })).wait();
   if (receipt === null) throw new Error('Pool creation transaction was not mined');
   return receipt;
 }

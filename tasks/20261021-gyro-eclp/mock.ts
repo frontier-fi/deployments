@@ -1,6 +1,6 @@
 import { Contract, TransactionReceipt } from 'ethers';
 
-import { NO_POOL_ROLES, sepoliaWethUsdc, SWAP_FEE, ZERO_ADDRESS } from '@src';
+import { gasLimitForDeployedCode, NO_POOL_ROLES, sepoliaWethUsdc, SWAP_FEE, ZERO_ADDRESS } from '@src';
 
 // Parameters from mainnet pool 0x2191df821c198600499aa1f0031b1a7514d7a7d9.
 export const eclpParams = {
@@ -26,21 +26,21 @@ export const MOCK_GYRO_ECLP_POOL = {
 };
 
 export async function createMockGyroEclpPool(factory: Contract, salt: string): Promise<TransactionReceipt> {
-  const receipt = await (
-    await factory.create(
-      MOCK_GYRO_ECLP_POOL.name,
-      MOCK_GYRO_ECLP_POOL.symbol,
-      sepoliaWethUsdc(),
-      eclpParams,
-      derivedEclpParams,
-      NO_POOL_ROLES,
-      SWAP_FEE,
-      ZERO_ADDRESS,
-      false,
-      false,
-      salt
-    )
-  ).wait();
+  const args = [
+    MOCK_GYRO_ECLP_POOL.name,
+    MOCK_GYRO_ECLP_POOL.symbol,
+    sepoliaWethUsdc(),
+    eclpParams,
+    derivedEclpParams,
+    NO_POOL_ROLES,
+    SWAP_FEE,
+    ZERO_ADDRESS,
+    false,
+    false,
+    salt,
+  ] as const;
+  const gasLimit = await gasLimitForDeployedCode(factory, factory.interface.encodeFunctionData('create', [...args]));
+  const receipt = await (await factory.create(...args, { gasLimit })).wait();
   if (receipt === null) throw new Error('Pool creation transaction was not mined');
   return receipt;
 }
