@@ -4,6 +4,7 @@ import { Etherscan } from '@nomicfoundation/hardhat-verify/etherscan';
 
 import Task from './task';
 import { findContractSourceName } from './buildinfo';
+import { ContractVerificationMissingBytecodeError } from '@nomicfoundation/hardhat-verify/internal/errors';
 import { encodeArguments, sleep } from '@nomicfoundation/hardhat-verify/internal/utilities';
 import {
   extractMatchingContractInformation,
@@ -14,6 +15,9 @@ import { ApiKey, ChainConfig } from '@nomicfoundation/hardhat-verify/types';
 import logger from './logger';
 
 const MAX_VERIFICATION_INTENTS = 3;
+const EXPLORER_BYTECODE_POLL_MS = 5_000;
+// Etherscan's verify endpoint rejects a contract until its backend has indexed the bytecode.
+const EXPLORER_BYTECODE_TIMEOUT_MS = 180_000;
 
 export default class Verifier {
   etherscanInstance: Etherscan;
@@ -107,7 +111,7 @@ export default class Verifier {
             args as any[]
           );
 
-    const { message: guid } = await this.etherscanInstance.verify(
+    const { message: guid } = await this.submitWhenExplorerHasBytecode(
       address,
       JSON.stringify(buildInfo.input),
       fullSourceName,
@@ -124,6 +128,68 @@ export default class Verifier {
     }
 
     throw new Error(`The API responded with an unexpected message: ${verificationStatus.message}`);
+  }
+
+  // The RPC can already see the code while Etherscan's verify call still returns "does not have bytecode".
+  private async submitWhenExplorerHasBytecode(
+    address: string,
+    sourceCode: string,
+    contractName: string,
+    compilerVersion: string,
+    constructorArguments: string
+  ) {
+    const deadline = Date.now() + EXPLORER_BYTECODE_TIMEOUT_MS;
+    let announced = false;
+
+    for (;;) {
+      if (await this.explorerHasBytecode(address)) {
+        try {
+          return await this.etherscanInstance.verify(
+            address,
+            sourceCode,
+            contractName,
+            compilerVersion,
+            constructorArguments
+          );
+        } catch (error) {
+          if (!(error instanceof ContractVerificationMissingBytecodeError)) throw error;
+        }
+      }
+
+      if (!announced) {
+        logger.log(`Waiting for Etherscan to index bytecode at ${address}`, '⏳', 'yellow');
+        announced = true;
+      }
+      if (Date.now() >= deadline) {
+        throw new Error(
+          `Etherscan has not indexed bytecode at ${address} after ${EXPLORER_BYTECODE_TIMEOUT_MS / 1000}s`
+        );
+      }
+      await sleep(EXPLORER_BYTECODE_POLL_MS);
+    }
+  }
+
+  private async explorerHasBytecode(address: string): Promise<boolean> {
+    const { apiKey, apiUrl, chainId } = this.etherscanInstance;
+    const parameters = new URLSearchParams({
+      apikey: apiKey,
+      module: 'proxy',
+      action: 'eth_getCode',
+      address,
+      tag: 'latest',
+    });
+    if (chainId !== undefined) parameters.set('chainid', String(chainId));
+
+    const url = new URL(apiUrl);
+    url.search = parameters.toString();
+
+    try {
+      const response = await fetch(url);
+      const json = (await response.json()) as { result?: unknown };
+      return typeof json.result === 'string' && /^0x[0-9a-fA-F]{2,}$/.test(json.result);
+    } catch {
+      return false;
+    }
   }
 
   // Trims the inputs of the build info to only keep imported files, avoiding submitting unnecessary source files for
