@@ -6,5 +6,6 @@ The source is [`Authorizer.sol` at `1b23f229`](https://github.com/balancer/balan
 
 ## Useful files
 
+- [Base addresses](./output/base.json)
 - [Sepolia addresses](./output/sepolia.json)
 - [`Authorizer` artifact](./artifact/Authorizer.json)

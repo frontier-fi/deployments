@@ -12,6 +12,7 @@ Bytecode is from [c1cd3696](https://github.com/balancer/balancer-v3-monorepo/com
 
 ## Useful files
 
+- [Base addresses](./output/base.json)
 - [Sepolia addresses](./output/sepolia.json)
 - [`WeightedLPOracleFactory` artifact](./artifact/WeightedLPOracleFactory.json)
 - [`WeightedLPOracle` artifact](./artifact/WeightedLPOracle.json)

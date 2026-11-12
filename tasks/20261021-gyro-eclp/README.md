@@ -10,6 +10,7 @@ Bytecode is from [aa9fe538](https://github.com/balancer/balancer-v3-monorepo/com
 
 ## Useful files
 
+- [Base addresses](./output/base.json)
 - [Sepolia addresses](./output/sepolia.json)
 - [`GyroECLPPoolFactory` artifact](./artifact/GyroECLPPoolFactory.json)
 - [`GyroECLPPool` artifact](./artifact/GyroECLPPool.json)
