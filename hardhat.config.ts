@@ -38,7 +38,8 @@ function liveNetworks(): Record<string, HttpNetworkUserConfig & { ledgerAccounts
     networks[name] = {
       url: rpcUrl(name),
       chainId: info.chainId,
-      accounts: privateKey ? [privateKey] : [],
+      // Not [] without a key: Hardhat wraps the Ledger provider in a local accounts one, which hides its account.
+      accounts: privateKey ? [privateKey] : 'remote',
       ledgerAccounts: privateKey ? [] : [process.env.LEDGER_ACCOUNT ?? DEPLOYER],
     };
   }
