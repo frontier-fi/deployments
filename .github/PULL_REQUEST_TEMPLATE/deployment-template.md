@@ -1,4 +1,4 @@
-# Deployment: <!-- Deployment title: contract or feature (e.g. `ManagedPool`) -->
+# Deployment: <!-- Deployment title: contract or feature (e.g. `Router`) -->
 
 ## Deployment tasks checklist:
 
@@ -8,7 +8,6 @@
 - [ ] Outputs for all target networks are generated, and linked in the task `README`
 - [ ] Addresses files are up to date with the new deployment <!-- yarn build-address-lookup -->
 - [ ] Contracts are verified in every network <!-- This includes contracts deployed by contracts (e.g. mock pools deployed by factories) -->
-- [ ] Deployments `CHANGELOG` is updated
 - [ ] There are no code changes of any kind
 
 ## Issue Resolution

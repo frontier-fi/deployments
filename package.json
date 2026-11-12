@@ -1,6 +1,5 @@
 {
   "name": "deployments",
-  "version": "3.2.0",
   "description": "Task-based deployment framework for contract addresses and artifacts",
   "license": "GPL-3.0-only",
   "homepage": "https://github.com/balancer/balancer-deployments/#readme",
