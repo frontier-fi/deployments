@@ -4,6 +4,7 @@ import { getAddress, JsonRpcProvider } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { assertForkChainId, useForkChainId } from './forkChain';
+import { etherscanApiKey, rpcUrl } from './networks';
 import logger, { Logger } from './logger';
 import Task, { NO_VERIFIER_WARNING, TaskMode } from './task';
 import { NETWORKS, Network } from './types';
@@ -40,7 +41,7 @@ export async function rehearse(
   }
   const fork = parseNetwork(args.fork);
   const reference = parseNetwork(args.reference);
-  const forkUrl = rpcUrl(hre, fork);
+  const forkUrl = rpcUrl(fork);
   useForkChainId(hre, fork);
 
   const verifier = args.skipVerification ? undefined : await dryRunVerifier(hre, fork, args.key);
@@ -71,11 +72,10 @@ export async function rehearse(
 
 // Built like the one yarn deploy uses (same key lookup, same chain config), but it only prepares requests.
 async function dryRunVerifier(hre: HardhatRuntimeEnvironment, fork: Network, key?: string): Promise<Verifier> {
-  const apiKey = key ?? (hre.config.networks[fork] as { verificationAPIKey?: string }).verificationAPIKey;
+  const apiKey = key ?? etherscanApiKey();
   if (!apiKey) {
     throw new Error(
-      `No verificationAPIKey for ${fork} in ~/.hardhat/networks.json, so yarn deploy would not verify. ` +
-        'Add one, pass --key, or pass --skip-verification.'
+      'ETHERSCAN_API_KEY is not set, so yarn deploy would not verify. Set it, pass --key, or pass --skip-verification.'
     );
   }
 
@@ -98,12 +98,6 @@ function parseNetwork(name: string): Network {
   return name as Network;
 }
 
-function rpcUrl(hre: HardhatRuntimeEnvironment, network: Network): string {
-  const url = (hre.config.networks[network] as { url?: string } | undefined)?.url;
-  if (!url) throw new Error(`No RPC url configured for ${network}. Add it to ~/.hardhat/networks.json`);
-  return url;
-}
-
 // The reference's recorded transactions give each task's nonces. Nonces below the deployer's current one that no
 // recorded transaction used were spent on transactions that failed, and must be burned on the new network too.
 async function buildPlan(hre: HardhatRuntimeEnvironment, reference: Network): Promise<Plan> {
@@ -117,7 +111,7 @@ async function buildPlan(hre: HardhatRuntimeEnvironment, reference: Network): Pr
     for (const address of Object.values(output)) taskOfAddress.set(address.toLowerCase(), id);
   }
 
-  const provider = new JsonRpcProvider(rpcUrl(hre, reference));
+  const provider = new JsonRpcProvider(rpcUrl(reference));
   const taskOfNonce = new Map<number, string>();
   const directlyCreated = new Set<string>();
   const deployers = new Set<string>();

@@ -1,14 +1,10 @@
-import fs from 'fs';
-import path from 'path';
 import { HardhatNetworkConfig, HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { SUPPORTED_NETWORKS } from './networks';
 import { Network } from './types';
 
-const SUPPORTED_NETWORKS_FILE = path.resolve(__dirname, '../addresses/.supported-networks.json');
-
 export function chainIdOf(network: Network): number {
-  const supported: Record<string, { chainId: number }> = JSON.parse(fs.readFileSync(SUPPORTED_NETWORKS_FILE, 'utf8'));
-  const entry = supported[network];
+  const entry = SUPPORTED_NETWORKS[network];
   if (!entry) throw new Error(`No chain id for ${network} in addresses/.supported-networks.json`);
   return entry.chainId;
 }

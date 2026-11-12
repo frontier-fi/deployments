@@ -4,8 +4,9 @@ import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 export { Artifact, Libraries } from 'hardhat/types';
 
 import Task from './task';
+import { SUPPORTED_NETWORKS } from './networks';
 
-export const NETWORKS = ['sepolia', 'base'];
+export const NETWORKS = Object.keys(SUPPORTED_NETWORKS);
 
 export type Network = (typeof NETWORKS)[number];
 

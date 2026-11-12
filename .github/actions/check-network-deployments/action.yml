@@ -8,9 +8,6 @@ runs:
     - uses: actions/checkout@v7
     - name: Set up environment
       uses: ./.github/actions/setup
-    - name: Prepare Config
-      run: yarn ci:prepare-config
-      shell: bash
     - name: Check Deployment Addresses
       run: yarn check-network-deployments ${{ inputs.network-name }}
       shell: bash

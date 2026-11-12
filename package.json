@@ -42,8 +42,7 @@
     "lint:typescript": "NODE_NO_WARNINGS=1 eslint . --ext .ts --ignore-path ./.eslintignore  --max-warnings 0",
     "prepack": "yarn build",
     "test": "yarn build && hardhat test",
-    "rehearse": "hardhat rehearse --fork",
-    "ci:prepare-config": "ts-node ci/prepare-config.ts"
+    "rehearse": "hardhat rehearse --fork"
   },
   "resolutions": {
     "node-fetch": "^3.3.2",
@@ -92,7 +91,6 @@
     "hardhat": "^2.29.1",
     "hardhat-gas-reporter": "^2.3.0",
     "hardhat-ignore-warnings": "^0.2.12",
-    "hardhat-local-networks-config-plugin": "^0.0.6",
     "lodash.range": "^3.2.0",
     "mocha": "^10.8.2",
     "node-fetch": "^3.3.2",

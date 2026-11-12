@@ -2,6 +2,7 @@ import { getAddress } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { assertForkChainId, useForkChainId } from './forkChain';
+import { rpcUrl } from './networks';
 import logger, { Logger } from './logger';
 import { findContractDeploymentTransactionHash } from './network';
 import { impersonate } from './signers';
@@ -22,10 +23,7 @@ export async function dryRun(
   }
   const network = args.fork as Network;
 
-  const forkConfig = hre.config.networks[network] as { url?: string } | undefined;
-  if (!forkConfig?.url) {
-    throw new Error(`No RPC url configured for ${network}. Add it to ~/.hardhat/networks.json`);
-  }
+  const forkUrl = rpcUrl(network);
 
   const task = new Task(args.id, TaskMode.TEST, network);
   if (hasDeploymentTransaction(task, network)) {
@@ -46,7 +44,7 @@ export async function dryRun(
   useForkChainId(hre, network);
   await hre.network.provider.request({
     method: 'hardhat_reset',
-    params: [{ forking: { jsonRpcUrl: forkConfig.url } }],
+    params: [{ forking: { jsonRpcUrl: forkUrl } }],
   });
   await assertForkChainId(hre, network);
   await hre.network.provider.send('hardhat_setNextBlockBaseFeePerGas', ['0x0']);

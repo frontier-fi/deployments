@@ -53,12 +53,10 @@ jobs:
       - uses: actions/checkout@v7
       - name: Set up environment
         uses: ./.github/actions/setup
-      - name: Prepare Config
-        run: yarn ci:prepare-config
-        env:
-          DRPC_API_KEY: ${{ secrets.DRPC_API_KEY }}
       - name: Check Deployment Address Lookup File
         run: yarn check-address-lookup
+        env:
+          DRPC_API_KEY: ${{ secrets.DRPC_API_KEY }}
 
   markdown-link-check:
     runs-on: ubuntu-latest
