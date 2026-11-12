@@ -3,7 +3,6 @@ import fs from 'fs';
 import { padEnd } from 'lodash';
 import path from 'path';
 import logger from './logger';
-import { request, gql } from 'graphql-request';
 
 import Task from './task';
 
@@ -31,15 +30,6 @@ export type ActionIdInfo = {
   contractName: string;
   signature: string;
 };
-
-interface TheGraphPermissionEntry {
-  id: string;
-  account: string;
-  action: {
-    id: string;
-  };
-  txHash: string;
-}
 
 function safeReadJsonFile<T>(filePath: string): Record<string, T> {
   const fileExists = fs.existsSync(filePath) && fs.statSync(filePath).isFile();
@@ -308,22 +298,4 @@ export function getActionIdInfo(actionId: string, network: string): ActionIdInfo
     .flat();
   // we return first entry because all the collisions are verified by scripts
   return entries[0];
-}
-
-export async function fetchTheGraphPermissions(url: string): Promise<TheGraphPermissionEntry[]> {
-  const query = gql`
-    query {
-      permissions {
-        id
-        account
-        action {
-          id
-        }
-        txHash
-      }
-    }
-  `;
-
-  const data = await request<{ permissions: TheGraphPermissionEntry[] }>(url, query);
-  return data.permissions;
 }

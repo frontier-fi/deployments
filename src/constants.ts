@@ -2,6 +2,10 @@ import { Network } from './types';
 
 export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
+// The account behind every deployment in this repo. Deployer-created addresses match across networks only while it
+// uses the same nonces on each (see yarn rehearse).
+export const DEPLOYER = '0xe7691e2764b4f4cB77Bc8380E16b66e4cDFbFf8b';
+
 export const ONES_BYTES32 = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
 
 export const ZERO_BYTES32 = '0x0000000000000000000000000000000000000000000000000000000000000000';

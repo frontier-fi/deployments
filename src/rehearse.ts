@@ -8,8 +8,7 @@ import { etherscanApiKey, rpcUrl } from './networks';
 import logger, { Logger } from './logger';
 import Task, { NO_VERIFIER_WARNING, TaskMode } from './task';
 import { NETWORKS, Network } from './types';
-import Verifier from './verifier';
-import { Etherscan } from '@nomicfoundation/hardhat-verify/etherscan';
+import Verifier, { createVerifier } from './verifier';
 
 const DEPLOYMENT_TXS_DIRECTORY = path.resolve(__dirname, '../deployment-txs');
 const REJECTED = 'REHEARSAL_LEDGER_REJECT';
@@ -79,12 +78,7 @@ async function dryRunVerifier(hre: HardhatRuntimeEnvironment, fork: Network, key
     );
   }
 
-  const chainConfig = await Etherscan.getCurrentChainConfig(
-    fork,
-    hre.network.provider,
-    hre.config.etherscan.customChains
-  );
-  const verifier = new Verifier(hre.network, apiKey, chainConfig, { dryRun: true });
+  const verifier = await createVerifier(hre, fork, apiKey, { dryRun: true });
 
   // A single key selects Etherscan's v2 API, which takes the chain id instead of the explorer's own URL.
   const { apiUrl, chainId, browserUrl } = verifier.etherscanInstance;

@@ -1,4 +1,4 @@
-import { CompilerInput, Libraries, Network } from 'hardhat/types';
+import { CompilerInput, HardhatRuntimeEnvironment, Libraries, Network } from 'hardhat/types';
 import * as parser from '@solidity-parser/parser';
 import { Etherscan } from '@nomicfoundation/hardhat-verify/etherscan';
 
@@ -10,16 +10,13 @@ import {
   getLibraryInformation,
 } from '@nomicfoundation/hardhat-verify/internal/solc/artifacts';
 import { Bytecode } from '@nomicfoundation/hardhat-verify/internal/solc/bytecode';
-import { ApiKey, ChainConfig } from '@nomicfoundation/hardhat-verify/types';
+import { ChainConfig } from '@nomicfoundation/hardhat-verify/types';
 import logger from './logger';
 import Sourcify from './sourcify';
 
-const MAX_VERIFICATION_INTENTS = 3;
 const EXPLORER_BYTECODE_POLL_MS = 5_000;
 // Etherscan's verify endpoint rejects a contract until its backend has indexed the bytecode.
 const EXPLORER_BYTECODE_TIMEOUT_MS = 180_000;
-const STATUS_POLL_MS = 3_000;
-const STATUS_TIMEOUT_MS = 60_000;
 
 // Deployed on every chain this repo targets, and verified on each explorer.
 const PERMIT2 = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
@@ -31,6 +28,24 @@ type PreparedVerification = {
   constructorArguments: string;
 };
 
+type VerifierOptions = { dryRun?: boolean; sourcify?: boolean };
+
+// The verifier yarn deploy, verify-contract and rehearse use. `network` names the chain to verify on, which in a
+// rehearsal is the forked network rather than hre.network.
+export async function createVerifier(
+  hre: HardhatRuntimeEnvironment,
+  network: string,
+  apiKey: string,
+  options: VerifierOptions = {}
+): Promise<Verifier> {
+  const chainConfig = await Etherscan.getCurrentChainConfig(
+    network,
+    hre.network.provider,
+    hre.config.etherscan.customChains
+  );
+  return new Verifier(hre.network, apiKey, chainConfig, options);
+}
+
 export default class Verifier {
   etherscanInstance: Etherscan;
   network: Network;
@@ -41,11 +56,12 @@ export default class Verifier {
   sourcify: Sourcify | undefined;
   private sourcifySupported: Promise<boolean> | undefined;
 
+  // A single key selects Etherscan's v2 API, which serves every chain.
   constructor(
     _network: Network,
-    _apiKey: ApiKey | undefined,
+    _apiKey: string,
     _chainConfig: ChainConfig,
-    { dryRun = false, sourcify = true }: { dryRun?: boolean; sourcify?: boolean } = {}
+    { dryRun = false, sourcify = true }: VerifierOptions = {}
   ) {
     this.network = _network;
     this.dryRun = dryRun;
@@ -99,21 +115,10 @@ export default class Verifier {
 
   // Exact match leaves SimilarMatch empty. A similar match names the other contract.
   async verificationMatch(address: string): Promise<string | undefined> {
-    const { apiKey, apiUrl, chainId } = this.etherscanInstance;
-    const parameters = new URLSearchParams({
-      apikey: apiKey,
-      module: 'contract',
-      action: 'getsourcecode',
-      address,
-    });
-    if (chainId !== undefined) parameters.set('chainid', String(chainId));
-
-    const url = new URL(apiUrl);
-    url.search = parameters.toString();
-
-    const response = await fetch(url);
-    const json = (await response.json()) as { result?: Array<{ SimilarMatch?: string; SourceCode?: string }> | string };
-    const result = Array.isArray(json.result) ? json.result[0] : undefined;
+    const json = await this.get({ module: 'contract', action: 'getsourcecode', address });
+    const result = Array.isArray(json.result)
+      ? (json.result[0] as { SimilarMatch?: string; SourceCode?: string })
+      : undefined;
     if (result === undefined) return undefined;
 
     const similar = result.SimilarMatch;
@@ -145,29 +150,14 @@ export default class Verifier {
   }
 
   private async verifyOnEtherscan(address: string, prepared: PreparedVerification): Promise<string> {
-    for (let intent = 1; ; intent++) {
-      const { message: guid } = await this.submitToEtherscan(address, prepared);
-      const response = await this.etherscanStatus(guid);
+    const { message: guid } = await this.submitToEtherscan(address, prepared);
 
-      if (response.isSuccess()) return this.etherscanInstance.getContractUrl(address);
-      if (intent >= MAX_VERIFICATION_INTENTS || !response.isBytecodeMissingInNetworkError()) {
-        throw new Error(`The contract verification failed. Reason: ${response.message}`);
-      }
-      logger.info(`Could not find deployed bytecode in network, retrying ${intent}/${MAX_VERIFICATION_INTENTS}...`);
-      await sleep(EXPLORER_BYTECODE_POLL_MS);
-    }
-  }
-
-  private async etherscanStatus(guid: string) {
-    const deadline = Date.now() + STATUS_TIMEOUT_MS;
-    for (;;) {
-      await sleep(STATUS_POLL_MS);
-      const status = await this.etherscanInstance.getVerificationStatus(guid);
-      if (status.isFailure() || status.isSuccess()) return status;
-      if (!status.isPending() || Date.now() >= deadline) {
-        throw new Error(`The API responded with an unexpected message: ${status.message}`);
-      }
-    }
+    // The new guid is not always queryable at once. getVerificationStatus then polls while it is pending.
+    await sleep(1000);
+    const status = await this.etherscanInstance.getVerificationStatus(guid);
+    if (status.isSuccess()) return this.etherscanInstance.getContractUrl(address);
+    // Includes "Already Verified", which Task.verify reports as a notice.
+    throw new Error(`The contract verification failed. Reason: ${status.message}`);
   }
 
   private async verifyOnSourcify(name: string, address: string, prepared: PreparedVerification): Promise<void> {
