@@ -1,6 +1,6 @@
 import { Contract, TransactionReceipt } from 'ethers';
 
-import { gasLimitForDeployedCode, NO_POOL_ROLES, sepoliaWethUsdc, SWAP_FEE, ZERO_ADDRESS } from '@src';
+import { gasLimitForDeployedCode, NO_POOL_ROLES, Network, SWAP_FEE, wethUsdc, ZERO_ADDRESS } from '@src';
 
 export const AMPLIFICATION = 1000n;
 
@@ -9,11 +9,15 @@ export const MOCK_STABLE_POOL = {
   symbol: 'MOCK',
 };
 
-export async function createMockStablePool(factory: Contract, salt: string): Promise<TransactionReceipt> {
+export async function createMockStablePool(
+  factory: Contract,
+  network: Network,
+  salt: string
+): Promise<TransactionReceipt> {
   const args = [
     MOCK_STABLE_POOL.name,
     MOCK_STABLE_POOL.symbol,
-    sepoliaWethUsdc(),
+    wethUsdc(network),
     AMPLIFICATION,
     NO_POOL_ROLES,
     SWAP_FEE,

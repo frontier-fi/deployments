@@ -54,12 +54,10 @@ jobs:
           key: hardhat-network-fork-${{ github.run_number }}-${{ github.run_attempt }}
           restore-keys: |
             hardhat-network-fork-
-      - name: Prepare Config
-        run: yarn ci:prepare-config
-        env:
-          SEPOLIA_RPC_ENDPOINT: ${{ secrets.SEPOLIA_RPC_ENDPOINT }}
       - name: Test
         run: yarn test --bail
+        env:
+          DRPC_API_KEY: ${{ secrets.DRPC_API_KEY }}
       - name: Save Forked Network Cache
         # Always save; the key changes on every run, and the current one should be the most complete one.
         id: cache-forked-network-save

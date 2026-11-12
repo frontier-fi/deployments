@@ -1,6 +1,12 @@
 {
   "sepolia": {
     "chainId": 11155111,
-    "block-explorer": "https://sepolia.etherscan.io"
+    "block-explorer": "https://sepolia.etherscan.io",
+    "drpc": "sepolia"
+  },
+  "base": {
+    "chainId": 8453,
+    "block-explorer": "https://basescan.org",
+    "drpc": "base"
   }
 }

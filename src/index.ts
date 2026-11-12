@@ -9,5 +9,6 @@ export * from './network';
 export * from './contracts';
 export * from './constants';
 export * from './pool';
+export * from './gas';
 
 export { default as Task } from './task';

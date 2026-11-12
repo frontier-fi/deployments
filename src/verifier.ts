@@ -1,51 +1,124 @@
-import { CompilerInput, Libraries, Network } from 'hardhat/types';
+import { CompilerInput, HardhatRuntimeEnvironment, Libraries, Network } from 'hardhat/types';
 import * as parser from '@solidity-parser/parser';
 import { Etherscan } from '@nomicfoundation/hardhat-verify/etherscan';
 
 import Task from './task';
 import { findContractSourceName } from './buildinfo';
-import { ContractVerificationMissingBytecodeError } from '@nomicfoundation/hardhat-verify/internal/errors';
 import { encodeArguments, sleep } from '@nomicfoundation/hardhat-verify/internal/utilities';
 import {
   extractMatchingContractInformation,
   getLibraryInformation,
 } from '@nomicfoundation/hardhat-verify/internal/solc/artifacts';
 import { Bytecode } from '@nomicfoundation/hardhat-verify/internal/solc/bytecode';
-import { ApiKey, ChainConfig } from '@nomicfoundation/hardhat-verify/types';
+import { ChainConfig } from '@nomicfoundation/hardhat-verify/types';
 import logger from './logger';
+import Sourcify from './sourcify';
 
-const MAX_VERIFICATION_INTENTS = 3;
 const EXPLORER_BYTECODE_POLL_MS = 5_000;
 // Etherscan's verify endpoint rejects a contract until its backend has indexed the bytecode.
 const EXPLORER_BYTECODE_TIMEOUT_MS = 180_000;
 
+// Deployed on every chain this repo targets, and verified on each explorer.
+const PERMIT2 = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
+
+type PreparedVerification = {
+  input: CompilerInput;
+  contractName: string;
+  solcLongVersion: string;
+  constructorArguments: string;
+};
+
+type VerifierOptions = { dryRun?: boolean; sourcify?: boolean };
+
+// The verifier yarn deploy, verify-contract and rehearse use. `network` names the chain to verify on, which in a
+// rehearsal is the forked network rather than hre.network.
+export async function createVerifier(
+  hre: HardhatRuntimeEnvironment,
+  network: string,
+  apiKey: string,
+  options: VerifierOptions = {}
+): Promise<Verifier> {
+  const chainConfig = await Etherscan.getCurrentChainConfig(
+    network,
+    hre.network.provider,
+    hre.config.etherscan.customChains
+  );
+  return new Verifier(hre.network, apiKey, chainConfig, options);
+}
+
 export default class Verifier {
   etherscanInstance: Etherscan;
   network: Network;
+  // Prepare each request (sources, bytecode match, constructor arguments) without submitting it.
+  dryRun: boolean;
+  dryRunFailures: string[] = [];
+  // Second verifier, best effort. Etherscan decides whether verification succeeded.
+  sourcify: Sourcify | undefined;
+  private sourcifySupported: Promise<boolean> | undefined;
 
-  constructor(_network: Network, _apiKey: ApiKey | undefined, _chainConfig: ChainConfig) {
+  // A single key selects Etherscan's v2 API, which serves every chain.
+  constructor(
+    _network: Network,
+    _apiKey: string,
+    _chainConfig: ChainConfig,
+    { dryRun = false, sourcify = true }: VerifierOptions = {}
+  ) {
     this.network = _network;
+    this.dryRun = dryRun;
 
     this.etherscanInstance = Etherscan.fromChainConfig(_apiKey, _chainConfig);
+    this.sourcify = sourcify ? new Sourcify(_chainConfig.chainId) : undefined;
+  }
+
+  // Calls every endpoint verification uses, with the configured key and chain, without verifying anything.
+  // Returns one line per endpoint; throws if verification cannot work.
+  async preflight(): Promise<string[]> {
+    const report: string[] = [];
+
+    const source = await this.get({ module: 'contract', action: 'getsourcecode', address: PERMIT2 });
+    const sourceResult = Array.isArray(source.result) ? (source.result[0] as { SourceCode?: string }) : undefined;
+    if (source.status !== '1' || !sourceResult?.SourceCode) {
+      throw new Error(`getsourcecode failed: ${JSON.stringify(source.result)}`);
+    }
+    report.push('getsourcecode: ok');
+
+    // An unknown guid is rejected after the key is accepted.
+    const status = await this.get({ module: 'contract', action: 'checkverifystatus', guid: '0' });
+    if (String(status.result).includes('API Key')) throw new Error(`checkverifystatus failed: ${status.result}`);
+    report.push('checkverifystatus: ok');
+
+    // Submitting for an address without code is rejected before anything is queued.
+    const submit = await this.post({
+      module: 'contract',
+      action: 'verifysourcecode',
+      contractaddress: '0x0000000000000000000000000000000000000001',
+      codeformat: 'solidity-standard-json-input',
+      contractname: 'Preflight.sol:Preflight',
+      compilerversion: 'v0.8.26+commit.8a97fa7a',
+      sourceCode: '{}',
+    });
+    if (!String(submit.result).includes('Unable to locate ContractCode')) {
+      throw new Error(`verifysourcecode failed: ${submit.result}`);
+    }
+    report.push('verifysourcecode: ok');
+
+    if (this.sourcify !== undefined) {
+      report.push(
+        (await this.isSourcifySupported())
+          ? `sourcify: chain ${this.sourcify.chainId} supported`
+          : `sourcify: chain ${this.sourcify.chainId} not supported, skipped`
+      );
+    }
+
+    return report;
   }
 
   // Exact match leaves SimilarMatch empty. A similar match names the other contract.
   async verificationMatch(address: string): Promise<string | undefined> {
-    const { apiKey, apiUrl, chainId } = this.etherscanInstance;
-    const parameters = new URLSearchParams({
-      apikey: apiKey,
-      module: 'contract',
-      action: 'getsourcecode',
-      address,
-    });
-    if (chainId !== undefined) parameters.set('chainid', String(chainId));
-
-    const url = new URL(apiUrl);
-    url.search = parameters.toString();
-
-    const response = await fetch(url);
-    const json = (await response.json()) as { result?: Array<{ SimilarMatch?: string; SourceCode?: string }> | string };
-    const result = Array.isArray(json.result) ? json.result[0] : undefined;
+    const json = await this.get({ module: 'contract', action: 'getsourcecode', address });
+    const result = Array.isArray(json.result)
+      ? (json.result[0] as { SimilarMatch?: string; SourceCode?: string })
+      : undefined;
     if (result === undefined) return undefined;
 
     const similar = result.SimilarMatch;
@@ -59,23 +132,63 @@ export default class Verifier {
     name: string,
     address: string,
     constructorArguments: string | unknown[],
-    libraries: Libraries = {},
-    intent = 1
+    libraries: Libraries = {}
   ): Promise<string> {
-    const response = await this.verify(task, name, address, constructorArguments, libraries);
+    let prepared: PreparedVerification;
+    try {
+      prepared = await this.prepare(task, name, address, constructorArguments, libraries);
+    } catch (error) {
+      if (this.dryRun)
+        this.dryRunFailures.push(`${name} at ${address}: ${error instanceof Error ? error.message : error}`);
+      throw error;
+    }
+    if (this.dryRun) return this.etherscanInstance.getContractUrl(address);
 
-    if (response.isSuccess()) {
-      return this.etherscanInstance.getContractUrl(address);
-    } else if (intent < MAX_VERIFICATION_INTENTS && response.isBytecodeMissingInNetworkError()) {
-      logger.info(`Could not find deployed bytecode in network, retrying ${intent++}/${MAX_VERIFICATION_INTENTS}...`);
-      sleep(5000);
-      return this.call(task, name, address, constructorArguments, libraries, intent++);
-    } else {
-      throw new Error(`The contract verification failed. Reason: ${response.message}`);
+    // Before Etherscan, whose "already verified" ends the call.
+    await this.verifyOnSourcify(name, address, prepared);
+    return this.verifyOnEtherscan(address, prepared);
+  }
+
+  private async verifyOnEtherscan(address: string, prepared: PreparedVerification): Promise<string> {
+    const { message: guid } = await this.submitToEtherscan(address, prepared);
+
+    // The new guid is not always queryable at once. getVerificationStatus then polls while it is pending.
+    await sleep(1000);
+    const status = await this.etherscanInstance.getVerificationStatus(guid);
+    if (status.isSuccess()) return this.etherscanInstance.getContractUrl(address);
+    // Includes "Already Verified", which Task.verify reports as a notice.
+    throw new Error(`The contract verification failed. Reason: ${status.message}`);
+  }
+
+  private async verifyOnSourcify(name: string, address: string, prepared: PreparedVerification): Promise<void> {
+    if (this.sourcify === undefined || !(await this.isSourcifySupported())) return;
+    try {
+      const match = await this.sourcify.verify(address, {
+        stdJsonInput: prepared.input,
+        compilerVersion: prepared.solcLongVersion,
+        contractIdentifier: prepared.contractName,
+      });
+      logger.success(`Sourcify: ${name} ${match.replace('_', ' ')} at ${this.sourcify.contractUrl(address)}`);
+    } catch (error) {
+      logger.warn(`Sourcify could not verify ${name} at ${address}: ${error instanceof Error ? error.message : error}`);
     }
   }
 
-  private async verify(task: Task, name: string, address: string, args: string | unknown[], libraries: Libraries = {}) {
+  private isSourcifySupported(): Promise<boolean> {
+    if (this.sourcify === undefined) return Promise.resolve(false);
+    this.sourcifySupported ??= this.sourcify.isChainSupported().catch(() => false);
+    return this.sourcifySupported;
+  }
+
+  // Everything up to the request: trimmed sources, the deployed bytecode matched to the build-info, and the
+  // ABI-encoded constructor arguments.
+  private async prepare(
+    task: Task,
+    name: string,
+    address: string,
+    args: string | unknown[],
+    libraries: Libraries = {}
+  ): Promise<PreparedVerification> {
     const deployedBytecode = await Bytecode.getDeployedContractBytecode(
       address,
       this.network.provider,
@@ -111,49 +224,33 @@ export default class Verifier {
             args as any[]
           );
 
-    const { message: guid } = await this.submitWhenExplorerHasBytecode(
-      address,
-      JSON.stringify(buildInfo.input),
-      fullSourceName,
-      `v${contractInformation.solcLongVersion}`,
-      deployArgumentsEncoded
-    );
-
-    await sleep(1000);
-
-    const verificationStatus = await this.etherscanInstance.getVerificationStatus(guid);
-
-    if (verificationStatus.isFailure() || verificationStatus.isSuccess()) {
-      return verificationStatus;
-    }
-
-    throw new Error(`The API responded with an unexpected message: ${verificationStatus.message}`);
+    return {
+      input: buildInfo.input,
+      contractName: fullSourceName,
+      solcLongVersion: contractInformation.solcLongVersion,
+      constructorArguments: deployArgumentsEncoded,
+    };
   }
 
-  // The RPC can already see the code while Etherscan's verify call still returns "does not have bytecode".
-  private async submitWhenExplorerHasBytecode(
-    address: string,
-    sourceCode: string,
-    contractName: string,
-    compilerVersion: string,
-    constructorArguments: string
-  ) {
+  // The RPC can see the code before Etherscan has indexed it, and until then Etherscan answers "Unable to locate
+  // ContractCode". Submitting is the check: it works with every API plan, unlike the proxy module, which a free key
+  // cannot use on paid-tier chains such as Base.
+  private async submitToEtherscan(address: string, prepared: PreparedVerification) {
     const deadline = Date.now() + EXPLORER_BYTECODE_TIMEOUT_MS;
     let announced = false;
 
     for (;;) {
-      if (await this.explorerHasBytecode(address)) {
-        try {
-          return await this.etherscanInstance.verify(
-            address,
-            sourceCode,
-            contractName,
-            compilerVersion,
-            constructorArguments
-          );
-        } catch (error) {
-          if (!(error instanceof ContractVerificationMissingBytecodeError)) throw error;
-        }
+      try {
+        return await this.etherscanInstance.verify(
+          address,
+          JSON.stringify(prepared.input),
+          prepared.contractName,
+          `v${prepared.solcLongVersion}`,
+          prepared.constructorArguments
+        );
+      } catch (error) {
+        // Not instanceof: hardhat-verify's errors reset their prototype to NomicLabsHardhatPluginError.
+        if (!(error instanceof Error && error.name === 'ContractVerificationMissingBytecodeError')) throw error;
       }
 
       if (!announced) {
@@ -169,27 +266,24 @@ export default class Verifier {
     }
   }
 
-  private async explorerHasBytecode(address: string): Promise<boolean> {
-    const { apiKey, apiUrl, chainId } = this.etherscanInstance;
-    const parameters = new URLSearchParams({
-      apikey: apiKey,
-      module: 'proxy',
-      action: 'eth_getCode',
-      address,
-      tag: 'latest',
-    });
+  private async get(fields: Record<string, string>): Promise<{ status?: string; result?: unknown }> {
+    const url = new URL(this.etherscanInstance.apiUrl);
+    url.search = this.parameters(fields).toString();
+    return (await fetch(url)).json();
+  }
+
+  private async post(fields: Record<string, string>): Promise<{ status?: string; result?: unknown }> {
+    const url = new URL(this.etherscanInstance.apiUrl);
+    const { chainid, ...body } = Object.fromEntries(this.parameters(fields));
+    if (chainid !== undefined) url.search = new URLSearchParams({ chainid }).toString();
+    return (await fetch(url, { method: 'POST', body: new URLSearchParams(body) })).json();
+  }
+
+  private parameters(fields: Record<string, string>): URLSearchParams {
+    const { apiKey, chainId } = this.etherscanInstance;
+    const parameters = new URLSearchParams({ apikey: apiKey, ...fields });
     if (chainId !== undefined) parameters.set('chainid', String(chainId));
-
-    const url = new URL(apiUrl);
-    url.search = parameters.toString();
-
-    try {
-      const response = await fetch(url);
-      const json = (await response.json()) as { result?: unknown };
-      return typeof json.result === 'string' && /^0x[0-9a-fA-F]{2,}$/.test(json.result);
-    } catch {
-      return false;
-    }
+    return parameters;
   }
 
   // Trims the inputs of the build info to only keep imported files, avoiding submitting unnecessary source files for

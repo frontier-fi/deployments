@@ -6,7 +6,6 @@ import { hexToBytes, Address } from '@ethereumjs/util';
 import { Chain, Common, Hardfork } from '@ethereumjs/common';
 import { EVM } from '@ethereumjs/evm';
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
-import { ContractAlreadyVerifiedError } from '@nomicfoundation/hardhat-verify/internal/errors';
 
 import logger from './logger';
 import Verifier from './verifier';
@@ -33,6 +32,8 @@ const ROOT = path.resolve(__dirname, '..');
 const TASKS_DIR = path.resolve(ROOT, 'tasks');
 const DEPRECATED_DIR = path.resolve(ROOT, 'deprecated');
 const SCRIPTS_DIR = path.resolve(ROOT, 'scripts');
+
+export const NO_VERIFIER_WARNING = 'Skipping contract verification, no verifier defined';
 
 export enum TaskMode {
   LIVE, // Deploys and saves outputs
@@ -336,14 +337,17 @@ export default class Task {
 
     const task = externalTask === undefined ? this : externalTask;
     const verifier = this._verifier;
-    if (!verifier) return logger.warn('Skipping contract verification, no verifier defined');
+    if (!verifier) return logger.warn(NO_VERIFIER_WARNING);
 
     try {
       const url = await verifier.call(task, name, address, constructorArguments, libs);
-      logger.success(`Verified contract ${name} at ${url}`);
+      logger.success(
+        verifier.dryRun ? `Prepared verification of ${name}, not submitted` : `Verified contract ${name} at ${url}`
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      if (error instanceof ContractAlreadyVerifiedError || message.toLowerCase().includes('already verified')) {
+      // By message: hardhat-verify's errors fail instanceof (their prototype is reset to NomicLabsHardhatPluginError).
+      if (message.toLowerCase().includes('already verified')) {
         const match = await verifier.verificationMatch(address).catch(() => undefined);
         const detail = match === undefined ? '' : ` (${match})`;
         logger.log(`${name} at ${address} is already verified${detail}`, '🟡', 'yellow');

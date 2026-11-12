@@ -1,6 +1,6 @@
 import { Contract, TransactionReceipt } from 'ethers';
 
-import { gasLimitForDeployedCode, NO_POOL_ROLES, sepoliaWethUsdc, SWAP_FEE, ZERO_ADDRESS } from '@src';
+import { gasLimitForDeployedCode, NO_POOL_ROLES, Network, SWAP_FEE, wethUsdc, ZERO_ADDRESS } from '@src';
 
 export const MOCK_WEIGHTED_POOL = {
   name: 'DO NOT USE - Mock Weighted Pool',
@@ -8,11 +8,15 @@ export const MOCK_WEIGHTED_POOL = {
   normalizedWeights: [8n * 10n ** 17n, 2n * 10n ** 17n],
 };
 
-export async function createMockWeightedPool(factory: Contract, salt: string): Promise<TransactionReceipt> {
+export async function createMockWeightedPool(
+  factory: Contract,
+  network: Network,
+  salt: string
+): Promise<TransactionReceipt> {
   const args = [
     MOCK_WEIGHTED_POOL.name,
     MOCK_WEIGHTED_POOL.symbol,
-    sepoliaWethUsdc(),
+    wethUsdc(network),
     MOCK_WEIGHTED_POOL.normalizedWeights,
     NO_POOL_ROLES,
     SWAP_FEE,

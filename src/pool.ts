@@ -1,6 +1,7 @@
 import { Contract, TransactionReceipt } from 'ethers';
 
-import { USDC, WETH, ZERO_ADDRESS } from './constants';
+import { CONSTANT_PRICE_FEED, USDC, WETH, ZERO_ADDRESS } from './constants';
+import { Network } from './types';
 
 export const SWAP_FEE = 10n ** 16n; // 1%
 
@@ -17,11 +18,16 @@ export type PoolTokenConfig = {
   paysYieldFees: boolean;
 };
 
-// Sepolia WETH and Circle USDC, sorted by address. create() calls decimals() on both.
-export function sepoliaWethUsdc(): PoolTokenConfig[] {
-  return [WETH.sepolia, USDC.sepolia]
+// WETH and Circle USDC, sorted by address. create() calls decimals() on both.
+export function wethUsdc(network: Network): PoolTokenConfig[] {
+  return [WETH[network], USDC[network]]
     .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
     .map((token) => ({ token, tokenType: 0, rateProvider: ZERO_ADDRESS, paysYieldFees: false }));
+}
+
+// One constant feed per token of the wethUsdc() pool.
+export function mockOracleFeeds(network: Network): string[] {
+  return [CONSTANT_PRICE_FEED[network], CONSTANT_PRICE_FEED[network]];
 }
 
 export function createdAddress(

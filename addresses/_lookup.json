@@ -1,4 +1,5 @@
 {
+  "base": {},
   "sepolia": {
     "ACTIVE": {
       "20261013-authorizer": {

@@ -20,7 +20,7 @@ describeForkTest('StablePool', 'sepolia', FORK_BLOCK, function () {
   });
 
   it('deploys a pool', async () => {
-    const receipt = await createMockStablePool(factory, ONES_BYTES32);
+    const receipt = await createMockStablePool(factory, task.network, ONES_BYTES32);
     await task.instanceAt('StablePool', poolCreatedAddress(factory, receipt));
   });
 

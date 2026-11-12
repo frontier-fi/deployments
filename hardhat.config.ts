@@ -1,23 +1,22 @@
-import '@nomicfoundation/hardhat-toolbox';
 import '@nomicfoundation/hardhat-ethers';
+import '@nomicfoundation/hardhat-chai-matchers';
 import '@nomicfoundation/hardhat-verify';
-import '@typechain/hardhat';
 import '@nomicfoundation/hardhat-ledger';
-import 'hardhat-local-networks-config-plugin';
-import 'hardhat-ignore-warnings';
 import 'tsconfig-paths/register';
 
-import { extendConfig, task } from 'hardhat/config';
+import { task } from 'hardhat/config';
 import { TASK_TEST } from 'hardhat/builtin-tasks/task-names';
-import { HardhatRuntimeEnvironment } from 'hardhat/types';
+import { HardhatRuntimeEnvironment, HttpNetworkUserConfig } from 'hardhat/types';
 
 import path from 'path';
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 
 import { checkArtifact, extractArtifact } from './src/artifact';
 import test from './src/test';
+import { dryRunAll } from './src/dryRun';
+import { rehearse } from './src/rehearse';
 import Task, { TaskMode } from './src/task';
-import Verifier from './src/verifier';
+import { createVerifier } from './src/verifier';
 import logger, { Logger } from './src/logger';
 import {
   actionIdTarget,
@@ -25,57 +24,37 @@ import {
   checkActionIdUniqueness,
   saveActionIds,
   getActionIdInfo,
-  fetchTheGraphPermissions,
 } from './src/actionId';
 import { checkContractDeploymentAddresses, saveContractDeploymentAddresses, withRetries } from './src/network';
-import { Etherscan } from '@nomicfoundation/hardhat-verify/etherscan';
-import { ApiKey } from '@nomicfoundation/hardhat-verify/types';
+import { etherscanApiKey, rpcUrl, SUPPORTED_NETWORKS } from './src/networks';
+import { DEPLOYER } from './src/constants';
 
-extendConfig((config) => {
-  for (const networkName of Object.keys(config.networks)) {
-    const network = config.networks[networkName] as { ledgerAccounts?: string[] };
-    if (network.ledgerAccounts === undefined) {
-      network.ledgerAccounts = [];
-    }
+// One entry per network in addresses/.supported-networks.json, with its RPC url from src/networks.ts.
+// The signer is DEPLOYER_PRIVATE_KEY if set, otherwise the Ledger at LEDGER_ACCOUNT (default DEPLOYER).
+function liveNetworks(): Record<string, HttpNetworkUserConfig & { ledgerAccounts: string[] }> {
+  const privateKey = process.env.DEPLOYER_PRIVATE_KEY;
+  const networks: Record<string, HttpNetworkUserConfig & { ledgerAccounts: string[] }> = {};
+  for (const [name, info] of Object.entries(SUPPORTED_NETWORKS)) {
+    networks[name] = {
+      url: rpcUrl(name),
+      chainId: info.chainId,
+      accounts: privateKey ? [privateKey] : [],
+      ledgerAccounts: privateKey ? [] : [process.env.LEDGER_ACCOUNT ?? DEPLOYER],
+    };
   }
-});
-
-const THEGRAPHURLS: { [key: string]: string } = {};
+  return networks;
+}
 
 task('deploy', 'Run deployment task')
   .addParam('id', 'Deployment task ID')
   .addFlag('force', 'Ignore previous deployments')
   .addOptionalParam('key', 'Etherscan API key to verify contracts')
-  .addFlag('v1', 'Use Etherscan V1 API to verify the contract')
   .setAction(
-    async (
-      args: { id: string; force?: boolean; key?: string; verbose?: boolean; v1?: boolean },
-      hre: HardhatRuntimeEnvironment
-    ) => {
+    async (args: { id: string; force?: boolean; key?: string; verbose?: boolean }, hre: HardhatRuntimeEnvironment) => {
       Logger.setDefaults(false, args.verbose || false);
 
-      const network = hre.network.name;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const networkApiKey = args.key ?? (hre.config.networks[network] as any).verificationAPIKey;
-      // If the v1 API flag is set, we need to wrap the API key in an object with the network name as the key
-      // as this is how the Etherscan verification library expects it (otherwise it defaults to v2).
-      const apiKey: ApiKey = args.v1
-        ? {
-            [network]: networkApiKey,
-          }
-        : networkApiKey;
-
-      const verifier = apiKey
-        ? new Verifier(
-            hre.network,
-            apiKey,
-            await Etherscan.getCurrentChainConfig(
-              hre.network.name,
-              hre.network.provider,
-              hre.config.etherscan.customChains
-            )
-          )
-        : undefined;
+      const apiKey = args.key ?? etherscanApiKey();
+      const verifier = apiKey ? await createVerifier(hre, hre.network.name, apiKey) : undefined;
       await new Task(args.id, TaskMode.LIVE, hre.network.name, verifier).run(args);
     }
   );
@@ -86,36 +65,15 @@ task('verify-contract', `Verify a task's deployment on a block explorer`)
   .addParam('address', 'Contract address')
   .addParam('args', 'ABI-encoded constructor arguments')
   .addOptionalParam('key', 'Etherscan API key to verify contracts')
-  .addFlag('v1', 'Use Etherscan V1 API to verify the contract')
   .setAction(
     async (
-      args: { id: string; name: string; address: string; key: string; args: string; verbose?: boolean; v1?: boolean },
+      args: { id: string; name: string; address: string; key?: string; args: string; verbose?: boolean },
       hre: HardhatRuntimeEnvironment
     ) => {
       Logger.setDefaults(false, args.verbose || false);
 
-      const network = hre.network.name;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const networkApiKey = args.key ?? (hre.config.networks[network] as any).verificationAPIKey;
-      // If the v1 API flag is set, we need to wrap the API key in an object with the network name as the key
-      // as this is how the Etherscan verification library expects it (otherwise it defaults to v2).
-      const apiKey: ApiKey = args.v1
-        ? {
-            [network]: networkApiKey,
-          }
-        : networkApiKey;
-
-      const verifier = apiKey
-        ? new Verifier(
-            hre.network,
-            apiKey,
-            await Etherscan.getCurrentChainConfig(
-              hre.network.name,
-              hre.network.provider,
-              hre.config.etherscan.customChains
-            )
-          )
-        : undefined;
+      const apiKey = args.key ?? etherscanApiKey();
+      const verifier = apiKey ? await createVerifier(hre, hre.network.name, apiKey) : undefined;
 
       // Contracts can only be verified in Live mode
       await new Task(args.id, TaskMode.LIVE, hre.network.name, verifier).verify(args.name, args.address, args.args);
@@ -293,26 +251,6 @@ task('get-action-id-info', `Returns all the matches for the given actionId`)
     }
   });
 
-task('get-action-ids-info', `Reconstructs all the permissions from TheGraph AP and action-ids files`).setAction(
-  async (args: { verbose?: boolean }, hre: HardhatRuntimeEnvironment) => {
-    Logger.setDefaults(false, args.verbose || false);
-    logger.log(`Fetching permissions using TheGraph API on ${hre.network.name}...`, '');
-
-    const permissions = await fetchTheGraphPermissions(THEGRAPHURLS[hre.network.name]);
-
-    const infos = (
-      await Promise.all(permissions.map((permission) => getActionIdInfo(permission.action.id, hre.network.name)))
-    ).map((info, index) => ({
-      ...info,
-      grantee: permissions[index].account,
-      actionId: permissions[index].action.id,
-      txHash: permissions[index].txHash,
-    }));
-    logger.log(`Found the following matches:`, '');
-    process.stdout.write(JSON.stringify(infos, null, 2));
-  }
-);
-
 task('build-address-lookup', `Build a lookup table from contract addresses to the relevant deployment`).setAction(
   async (args: { verbose?: boolean }, hre: HardhatRuntimeEnvironment) => {
     Logger.setDefaults(false, args.verbose || false);
@@ -361,46 +299,24 @@ task(TASK_TEST)
   .addOptionalParam('deployer', 'Public address to impersonate as the deployer on the fork.')
   .setAction(test);
 
+task('dry-run', 'Run tasks on a fork of one network, with its chain id')
+  .addParam('fork', 'Network to fork')
+  .addOptionalParam('id', 'Specific task ID to run')
+  .addOptionalParam('deployer', 'Public address to impersonate as the deployer on the fork.')
+  .setAction(dryRunAll);
+
+task('rehearse', `Replay a reference network's deployment order and nonces on a fork, then simulate it live`)
+  .addParam('fork', 'Network to rehearse the deployment for')
+  .addOptionalParam('reference', 'Network whose task order and nonces to copy', 'sepolia')
+  .addOptionalParam('key', 'Etherscan API key to prepare verification with')
+  .addFlag('skipSimulation', 'Skip the eth_simulateV1 replay on the live chain')
+  .addFlag('skipVerification', 'Do not prepare explorer verification')
+  .setAction(rehearse);
+
 export default {
-  typechain: {
-    target: 'ethers-v6',
-    outDir: '.src/typechain-types',
-  },
+  networks: liveNetworks(),
   mocha: {
     timeout: 600000,
-  },
-  solidity: {
-    compilers: [
-      {
-        version: '0.7.1',
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 9999,
-          },
-        },
-      },
-      {
-        version: '0.8.26',
-        settings: {
-          evmVersion: 'cancun',
-          optimizer: {
-            enabled: true,
-            runs: 9999,
-          },
-        },
-      },
-    ],
-  },
-  paths: {
-    artifacts: './artifacts',
-    sources: './contracts',
-  },
-  warnings: {
-    '*': {
-      'shadowing-opcode': 'off',
-      default: 'error',
-    },
   },
   etherscan: {
     customChains: [],

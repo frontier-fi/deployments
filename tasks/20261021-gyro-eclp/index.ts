@@ -18,7 +18,7 @@ export default async (task: Task, { force, from }: TaskRunOptions = {}): Promise
   if (task.mode === TaskMode.LIVE) {
     // Same skip as task.deploy: create the pool once, then verify it on later runs.
     if (force || !task.output({ ensure: false })['MockGyroECLPPool']) {
-      const poolCreationReceipt = await createMockGyroEclpPool(factory, ZERO_BYTES32);
+      const poolCreationReceipt = await createMockGyroEclpPool(factory, task.network, ZERO_BYTES32);
       const mockPoolAddress = poolCreatedAddress(factory, poolCreationReceipt);
 
       saveContractDeploymentTransactionHash(mockPoolAddress, poolCreationReceipt.hash, task.network);

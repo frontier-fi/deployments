@@ -1,6 +1,6 @@
 # Deploying Contracts
 
-The deployments package aims to provide a robust mechanism to run and verify deployments on multiple networks. This document describes the rationale, what guarantees it provides, and how to create and run deployments.
+This repo aims to provide a robust mechanism to run and verify deployments on multiple networks. This document describes the rationale, what guarantees it provides, and how to create and run deployments.
 
 ## Overview
 
@@ -36,17 +36,19 @@ The `output` and `artifact` directories will be automatically generated and popu
 
 ### Generating build info
 
-The build information should be generated on a clean commit, so that it can be verified by other parties. On the project directory, delete the `artifacts` directory and run `yarn hardhat compile` for a clean compilation. The file will then be located at `artifacts/build-info`, and it'll contain the data for all the contracts in the workspace.
+Build information comes from the contracts repository; this repo compiles nothing. Generate it there on a clean commit, so that it can be verified by other parties: delete the `artifacts` directory and run `yarn hardhat compile` for a clean compilation. The file will then be located at `artifacts/build-info`, and it'll contain the data for all the contracts in that workspace.
 
 ### Generating artifact files with ABI and bytecode
 
 To generate the artifacts from build info files:
 
-- Copy the generated build info `json` from `artifacts/build-info` to `tasks/<task-id>/build-info`.
-- From the `deployments` workspace, run `extract-artifacts` task using the task ID as parameter. Optionally, the contract name and the target file can be specified if e.g. the contract name doesn't match the file name, or if the contract is present in more than one file with different compilation settings. For example:
+- Copy the generated build info `json` from the contracts repository's `artifacts/build-info` to `tasks/<task-id>/build-info`.
+- From this repo, run the `extract-artifacts` task with the task ID. It copies the ABI and bytecode out of the build info's compiler output, so it does not depend on any compiler setting here.
+
+Without `--name`, each build info file name is taken as the contract name, or `build-info-aliases.json` in the task maps contract names to files. A build info file named by its hash needs `--name` and `--file`:
 
 ```
-yarn extract-artifacts --id 20221021-managed-pool --name ManagedPool --file ManagedPoolFactory
+yarn extract-artifacts --id 20261013-authorizer --name Authorizer --file db00c8e4bd40bb1bdee56c8a10243a74
 ```
 
 The `artifact` folder should have been populated with the created artifacts at this point.
@@ -81,32 +83,19 @@ The final `diff` command will produce no output if the build information files m
 
 ### Prerequisites
 
-Tasks require an RPC endpoint to broadcast transactions and an Etherscan API key to submit source code for verification. The transaction sender is the first account Hardhat exposes for that network. Configure either a private key or a Ledger address in `~/.hardhat/networks.json`.
+Networks are defined in the repo. Secrets and the signer come from environment variables:
 
-This data is accessed via the [`local-networks-config`](https://www.npmjs.com/package/hardhat-local-networks-config-plugin) Hardhat plugin, which expects a JSON file at `~/.hardhat/networks.json` with the following contents (replace accordingly):
+| Variable                       | Used for                                                                                                                                                                                              |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DRPC_API_KEY` (or `DRPC_KEY`) | RPC endpoint for every network: `https://lb.drpc.live/<drpc name>/<key>`. Without a key, dRPC's free endpoint `https://<drpc name>.drpc.org`, which does not cover every chain (Sepolia is paid-only) |
+| `RPC_URL_<NETWORK>`            | Overrides the endpoint for one network, e.g. `RPC_URL_BASE=http://127.0.0.1:8545`                                                                                                                     |
+| `ETHERSCAN_API_KEY`            | Explorer verification. Etherscan's v2 API takes one key for every chain. `--key` overrides it                                                                                                         |
+| `LEDGER_ACCOUNT`               | Ledger address that signs. Defaults to the deployer, `0xe7691e2764b4f4cB77Bc8380E16b66e4cDFbFf8b`                                                                                                     |
+| `DEPLOYER_PRIVATE_KEY`         | Signs with this key instead of a Ledger                                                                                                                                                               |
 
-```json
-{
-  "networks": {
-    "sepolia": {
-      "url": "https://sepolia.rpc.endpoint/myAPIKey",
-      "verificationAPIKey": "sepolia-etherscan-API-key",
-      "ledgerAccounts": ["0xLedgerAddress"]
-    }
-  },
-  "defaultConfig": {
-    "gasPrice": "auto",
-    "gasMultiplier": 1,
-    "accounts": ["0x-eoa-private-key"]
-  }
-}
-```
+The Ledger is only opened to sign. Unlock it and open the Ethereum app before deploying. Contract deployment prompts for blind signing. `yarn test` does not use these accounts. It forks through the in-process Hardhat network.
 
-Use either `accounts` or `ledgerAccounts`. A private key in `accounts` is the first signer, ahead of a Ledger address. With no private key, the first Ledger address is the signer. Omit the field you are not using.
-
-Unlock the Ledger and open the Ethereum app before deploying. Contract deployment prompts for blind signing. `yarn test` does not use these accounts. It forks through the in-process Hardhat network.
-
-`sepolia` is chain id 11155111. Add another chain in `src/types.ts` (`NETWORKS`), `addresses/.supported-networks.json`, and this file. Chains the verifier does not already know also need an `etherscan.customChains` entry in `hardhat.config.ts`.
+`addresses/.supported-networks.json` is the list of networks: chain id, block explorer and dRPC name. `sepolia` is chain id 11155111 and `base` is 8453. To add a chain, add it there and give the per-network constants in `src/constants.ts` (WETH, USDC, constant price feed, sequencer uptime feed) a value for it. Chains the verifier does not already know also need an `etherscan.customChains` entry in `hardhat.config.ts`.
 
 ### `deploy`
 
@@ -122,9 +111,32 @@ A contract created by a factory and not listed in the task output is omitted fro
 
 This mechanism should work for EVM-equivalent networks, using the same compiled artifact on each one.
 
+### `rehearse`
+
+```bash
+$ yarn rehearse <network>
+$ yarn rehearse <network> --reference sepolia --skip-simulation
+```
+
+Contracts the deployer creates itself get the same address on every network only if each one is created at the same nonce. `rehearse` reads the task order and nonces from the reference network (`sepolia` by default): `deployment-txs/<reference>.json` gives each task's nonces, and any lower nonce with no recorded transaction was spent on a failed one. It prints that plan, with `BURN` for each spent nonce.
+
+It then runs every task in LIVE mode on a fork of `<network>`, with the fork's chain id and the reference deployer impersonated. When a task would sign at a nonce to burn, the run stops the way a rejected Ledger prompt does, burns the nonce with a 0-value self-transfer, and runs the task again. Each address is compared with the reference. One the deployer created itself must match. One a factory created may differ, because pool factories mix `block.chainid` into the CREATE2 salt.
+
+Explorer verification is rehearsed with the key and chain config `yarn deploy` would use (`--key` overrides the key). Before the fork run, it calls each Etherscan endpoint verification needs with harmless requests, so a bad key or a chain outside the API plan fails fast. During the run, each contract's request is prepared but not submitted: trimmed sources, the fork's bytecode matched to the build-info, and encoded constructor arguments. Etherscan only accepts a submission once the bytecode is on the live chain, so that last step happens in `yarn deploy`. Pass `--skip-verification` to skip all of this.
+
+Finally it sends every recorded transaction to the live RPC with `eth_simulateV1`, which executes them with the chain's own client and fork rules. Hardhat's EVM can trail a live chain: it does not know Glamsterdam, for example. Each transaction must succeed within the gas limit it was given. The RPC must support `eth_simulateV1`; otherwise pass `--skip-simulation`. Outputs and transaction hashes written for `<network>` are restored afterwards.
+
+To deploy, follow the printed plan with `yarn deploy`. Reject the Ledger prompt that would sign at a nonce marked `BURN`; outputs are saved per contract, so the rerun resumes. Burn the nonce, then run the same task again:
+
+```bash
+$ cast send <deployer> --value 0 --nonce <nonce> --ledger --rpc-url <url>
+```
+
+`yarn test` forks each network in its own process, because Hardhat fixes the chain id when the provider is created. It skips a task whose dependencies are not yet deployed on that network.
+
 ## Checking Deployments
 
-`yarn check` runs `lint`, `check-artifacts`, `check-deployments`, `check-action-ids`, and `check-address-lookup`. `check-deployments` compares each address in `output/<network>.json` to the transaction in `deployment-txs/<network>.json`, using `index.ts`, `input.ts`, and `build-info`. CI runs the same checks. The ones that read the chain need an [RPC endpoint](#prerequisites).
+`yarn check` runs `lint`, `check-artifacts`, `check-deployments`, `check-action-ids`, and `check-address-lookup`. `check-deployments` compares each address in `output/<network>.json` to the transaction in `deployment-txs/<network>.json`, using `index.ts`, `input.ts`, and `build-info`. CI runs the same checks. The ones that read the chain need an [RPC endpoint](#prerequisites). CI passes the `DRPC_API_KEY` secret.
 
 ## Running Tests
 
@@ -138,10 +150,10 @@ $ yarn test --deployer <address>
 
 The task id is the directory name, such as `20261013-authorizer`. `--id` limits both the fork run and the Mocha files to that task. `--deployer` is the public address impersonated as the transaction sender and funded with 100 ETH on the fork. Omit it and the fork uses Hardhat's built-in account. `--network` selects a live network, so `yarn test` exits when it is set.
 
-The RPC url comes from `~/.hardhat/networks.json`. A private key and an Etherscan API key are not used. Addresses are written to `output/test.json`. That file is the result of the local fork. Each run redeploys, skips explorer verification, and does not record transaction hashes.
+The RPC url comes from the same [environment variables](#prerequisites). A private key and an Etherscan API key are not used. Addresses are written to `output/test.json`. That file is the result of the local fork. Each run redeploys, skips explorer verification, and does not record transaction hashes.
 
 ### Writing Fork Tests
 
 These are fairly involved, as they use a lot of custom utilities related to loading other tasks, impersonating accounts, etc. The suggested way to write them is to copy one for a similar task and then edit as needed.
 
-[^1]: If Etherscan has not indexed the bytecode yet, verification fails. Run `yarn deploy` again once it has. If the contract is already verified, the log is a yellow notice and the command continues.
+[^1]: Each contract is submitted to Sourcify, then to Etherscan. Sourcify needs no key; a failure there is a warning only, so Etherscan decides whether verification succeeded. Until Etherscan has indexed the bytecode it answers "Unable to locate ContractCode", and the submission is retried for up to 3 minutes; after that, run `yarn deploy` again. This works with a free Etherscan key on paid-tier chains such as Base, where the API's `proxy` module is not available. If the contract is already verified, the log is a yellow notice and the command continues.

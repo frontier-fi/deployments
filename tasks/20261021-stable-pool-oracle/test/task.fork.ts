@@ -26,6 +26,7 @@ describeForkTest('StableLPOracle', 'sepolia', FORK_BLOCK, function () {
   it('deploys an oracle', async () => {
     const receipt = await createMockStableOracle(
       factory,
+      task.network,
       pool,
       deployment.ShouldUseBlockTimeForOldestFeedUpdate,
       deployment.ShouldRevertIfVaultUnlocked

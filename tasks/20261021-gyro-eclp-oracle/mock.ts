@@ -1,32 +1,26 @@
 import { Contract, TransactionReceipt } from 'ethers';
 
-import { CONSTANT_PRICE_FEED, gasLimitForDeployedCode } from '@src';
-
-export const MOCK_ECLP_ORACLE_FEEDS = [CONSTANT_PRICE_FEED.sepolia, CONSTANT_PRICE_FEED.sepolia];
+import { gasLimitForDeployedCode, Network, mockOracleFeeds } from '@src';
 
 export async function createMockEclpOracle(
   factory: Contract,
+  network: Network,
   pool: string,
   shouldUseBlockTimeForOldestFeedUpdate: boolean,
   shouldRevertIfVaultUnlocked: boolean
 ): Promise<TransactionReceipt> {
+  const feeds = mockOracleFeeds(network);
   const gasLimit = await gasLimitForDeployedCode(
     factory,
     factory.interface.encodeFunctionData('create', [
       pool,
       shouldUseBlockTimeForOldestFeedUpdate,
       shouldRevertIfVaultUnlocked,
-      MOCK_ECLP_ORACLE_FEEDS,
+      feeds,
     ])
   );
   const receipt = await (
-    await factory.create(
-      pool,
-      shouldUseBlockTimeForOldestFeedUpdate,
-      shouldRevertIfVaultUnlocked,
-      MOCK_ECLP_ORACLE_FEEDS,
-      { gasLimit }
-    )
+    await factory.create(pool, shouldUseBlockTimeForOldestFeedUpdate, shouldRevertIfVaultUnlocked, feeds, { gasLimit })
   ).wait();
   if (receipt === null) throw new Error('Oracle creation transaction was not mined');
   return receipt;

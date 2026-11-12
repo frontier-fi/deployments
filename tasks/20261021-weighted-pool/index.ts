@@ -3,10 +3,10 @@ import { createMockWeightedPool, MOCK_WEIGHTED_POOL } from './mock';
 import {
   poolCreatedAddress,
   saveContractDeploymentTransactionHash,
-  sepoliaWethUsdc,
   Task,
   TaskMode,
   TaskRunOptions,
+  wethUsdc,
   ZERO_BYTES32,
 } from '@src';
 
@@ -19,7 +19,7 @@ export default async (task: Task, { force, from }: TaskRunOptions = {}): Promise
   if (task.mode === TaskMode.LIVE) {
     // Same skip as task.deploy: create the pool once, then verify it on later runs.
     if (force || !task.output({ ensure: false })['MockWeightedPool']) {
-      const poolCreationReceipt = await createMockWeightedPool(factory, ZERO_BYTES32);
+      const poolCreationReceipt = await createMockWeightedPool(factory, task.network, ZERO_BYTES32);
       const mockPoolAddress = poolCreatedAddress(factory, poolCreationReceipt);
 
       saveContractDeploymentTransactionHash(mockPoolAddress, poolCreationReceipt.hash, task.network);
@@ -27,7 +27,7 @@ export default async (task: Task, { force, from }: TaskRunOptions = {}): Promise
     }
 
     const mockPool = await task.instanceAt('WeightedPool', task.output()['MockWeightedPool']);
-    const tokens = sepoliaWethUsdc();
+    const tokens = wethUsdc(task.network);
 
     // The factory derives these inside create, from each token's decimals.
     const minTokenBalances = await minimumTokenBalances(tokens.map((token) => token.token));

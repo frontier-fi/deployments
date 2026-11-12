@@ -1,9 +1,8 @@
 import fs from 'fs';
 import path from 'path';
+import { spawnSync } from 'child_process';
 import { RunSuperFunction, HardhatRuntimeEnvironment, HttpNetworkConfig, HardhatNetworkConfig } from 'hardhat/types';
 
-import { dryRun } from './dryRun';
-import Task from './task';
 import { NETWORKS } from './types';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -32,11 +31,16 @@ function findTaskTests(dir = ''): string[] {
 }
 
 export default async function (args: any, hre: HardhatRuntimeEnvironment, run: RunSuperFunction<any>): Promise<void> {
-  const ids: string[] = args.id ? [args.id] : Task.getAllTaskIds();
-  for (const id of ids) {
-    for (const fork of NETWORKS) {
-      await dryRun({ id, fork, deployer: args.deployer }, hre);
-    }
+  // One process per network: the fork's chain id is fixed when the provider is created.
+  for (const fork of NETWORKS) {
+    const cliArgs = ['dry-run', '--fork', fork];
+    if (args.id) cliArgs.push('--id', args.id);
+    if (args.deployer) cliArgs.push('--deployer', args.deployer);
+
+    const result = spawnSync(process.execPath, [require.resolve('hardhat/internal/cli/cli'), ...cliArgs], {
+      stdio: 'inherit',
+    });
+    if (result.status !== 0) throw new Error(`Dry run on ${fork} failed`);
   }
 
   if (!args.testFiles?.length) {

@@ -1,6 +1,13 @@
 import { EclpLPOracleDeployment } from './input';
-import { createMockEclpOracle, MOCK_ECLP_ORACLE_FEEDS } from './mock';
-import { createdAddress, saveContractDeploymentTransactionHash, Task, TaskMode, TaskRunOptions } from '@src';
+import { createMockEclpOracle } from './mock';
+import {
+  createdAddress,
+  saveContractDeploymentTransactionHash,
+  Task,
+  TaskMode,
+  TaskRunOptions,
+  mockOracleFeeds,
+} from '@src';
 
 export default async (task: Task, { force, from }: TaskRunOptions = {}): Promise<void> => {
   const input = task.input() as EclpLPOracleDeployment;
@@ -20,6 +27,7 @@ export default async (task: Task, { force, from }: TaskRunOptions = {}): Promise
     if (force || !task.output({ ensure: false })['MockEclpLPOracle']) {
       const receipt = await createMockEclpOracle(
         factory,
+        task.network,
         pool,
         input.ShouldUseBlockTimeForOldestFeedUpdate,
         input.ShouldRevertIfVaultUnlocked
@@ -34,7 +42,7 @@ export default async (task: Task, { force, from }: TaskRunOptions = {}): Promise
     await task.verify('EclpLPOracle', mockOracle.target.toString(), [
       input.Vault,
       pool,
-      MOCK_ECLP_ORACLE_FEEDS,
+      mockOracleFeeds(task.network),
       input.SequencerUptimeFeed,
       input.UptimeResyncWindow,
       input.ShouldUseBlockTimeForOldestFeedUpdate,

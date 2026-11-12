@@ -20,7 +20,7 @@ describeForkTest('WeightedPool', 'sepolia', FORK_BLOCK, function () {
   });
 
   it('deploys a pool', async () => {
-    const receipt = await createMockWeightedPool(factory, ONES_BYTES32);
+    const receipt = await createMockWeightedPool(factory, task.network, ONES_BYTES32);
     await task.instanceAt('WeightedPool', poolCreatedAddress(factory, receipt));
   });
 

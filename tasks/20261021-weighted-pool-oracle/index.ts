@@ -1,6 +1,13 @@
 import { WeightedLPOracleDeployment } from './input';
-import { createMockWeightedOracle, MOCK_WEIGHTED_ORACLE_FEEDS } from './mock';
-import { createdAddress, saveContractDeploymentTransactionHash, Task, TaskMode, TaskRunOptions } from '@src';
+import { createMockWeightedOracle } from './mock';
+import {
+  createdAddress,
+  saveContractDeploymentTransactionHash,
+  Task,
+  TaskMode,
+  TaskRunOptions,
+  mockOracleFeeds,
+} from '@src';
 
 export default async (task: Task, { force, from }: TaskRunOptions = {}): Promise<void> => {
   const input = task.input() as WeightedLPOracleDeployment;
@@ -20,6 +27,7 @@ export default async (task: Task, { force, from }: TaskRunOptions = {}): Promise
     if (force || !task.output({ ensure: false })['MockWeightedLPOracle']) {
       const receipt = await createMockWeightedOracle(
         factory,
+        task.network,
         pool,
         input.ShouldUseBlockTimeForOldestFeedUpdate,
         input.ShouldRevertIfVaultUnlocked
@@ -34,7 +42,7 @@ export default async (task: Task, { force, from }: TaskRunOptions = {}): Promise
     await task.verify('WeightedLPOracle', mockOracle.target.toString(), [
       input.Vault,
       pool,
-      MOCK_WEIGHTED_ORACLE_FEEDS,
+      mockOracleFeeds(task.network),
       input.SequencerUptimeFeed,
       input.UptimeResyncWindow,
       input.ShouldUseBlockTimeForOldestFeedUpdate,
