@@ -12,6 +12,8 @@ const CODE_POLL_INTERVAL_MS = 2_000;
 const CODE_POLL_TIMEOUT_MS = 60_000;
 // An empty account prices this calldata at intrinsic gas (~30k). A factory `create` deploys a contract.
 const MIN_DEPLOYED_CODE_GAS = 100_000n;
+// The estimate is the exact minimum. State can shift before inclusion (e.g. a price feed round), so add headroom.
+const GAS_LIMIT_BUFFER_PERCENT = 110n;
 
 // The deploy receipt can land before every RPC backend sees the bytecode. Hardhat estimates
 // eth_estimateGas against "pending", which can still look empty after getCode("latest") succeeds,
@@ -34,7 +36,7 @@ export async function gasLimitForDeployedCode(factory: Contract, data: string): 
   for (;;) {
     try {
       const gas = await ethers.provider.estimateGas(request);
-      if (gas >= MIN_DEPLOYED_CODE_GAS) return gas;
+      if (gas >= MIN_DEPLOYED_CODE_GAS) return (gas * GAS_LIMIT_BUFFER_PERCENT) / 100n;
     } catch (error) {
       const code = await ethers.provider.getCode(to);
       if (code !== '0x') throw error;

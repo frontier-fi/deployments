@@ -16,6 +16,8 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 
 import { checkArtifact, extractArtifact } from './src/artifact';
 import test from './src/test';
+import { dryRunAll } from './src/dryRun';
+import { rehearse } from './src/rehearse';
 import Task, { TaskMode } from './src/task';
 import Verifier from './src/verifier';
 import logger, { Logger } from './src/logger';
@@ -360,6 +362,20 @@ task(TASK_TEST)
   .addOptionalParam('id', 'Specific task ID of the fork test to run.')
   .addOptionalParam('deployer', 'Public address to impersonate as the deployer on the fork.')
   .setAction(test);
+
+task('dry-run', 'Run tasks on a fork of one network, with its chain id')
+  .addParam('fork', 'Network to fork')
+  .addOptionalParam('id', 'Specific task ID to run')
+  .addOptionalParam('deployer', 'Public address to impersonate as the deployer on the fork.')
+  .setAction(dryRunAll);
+
+task('rehearse', `Replay a reference network's deployment order and nonces on a fork, then simulate it live`)
+  .addParam('fork', 'Network to rehearse the deployment for')
+  .addOptionalParam('reference', 'Network whose task order and nonces to copy', 'sepolia')
+  .addOptionalParam('key', 'Etherscan API key to prepare verification with')
+  .addFlag('skipSimulation', 'Skip the eth_simulateV1 replay on the live chain')
+  .addFlag('skipVerification', 'Do not prepare explorer verification')
+  .setAction(rehearse);
 
 export default {
   typechain: {

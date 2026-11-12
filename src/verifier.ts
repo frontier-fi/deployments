@@ -19,14 +19,70 @@ const EXPLORER_BYTECODE_POLL_MS = 5_000;
 // Etherscan's verify endpoint rejects a contract until its backend has indexed the bytecode.
 const EXPLORER_BYTECODE_TIMEOUT_MS = 180_000;
 
+// Deployed on every chain this repo targets, and verified on each explorer.
+const PERMIT2 = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
+
+type PreparedVerification = {
+  sourceCode: string;
+  contractName: string;
+  compilerVersion: string;
+  constructorArguments: string;
+};
+
 export default class Verifier {
   etherscanInstance: Etherscan;
   network: Network;
+  // Prepare each request (sources, bytecode match, constructor arguments) without submitting it.
+  dryRun: boolean;
+  dryRunFailures: string[] = [];
 
-  constructor(_network: Network, _apiKey: ApiKey | undefined, _chainConfig: ChainConfig) {
+  constructor(_network: Network, _apiKey: ApiKey | undefined, _chainConfig: ChainConfig, _dryRun = false) {
     this.network = _network;
+    this.dryRun = _dryRun;
 
     this.etherscanInstance = Etherscan.fromChainConfig(_apiKey, _chainConfig);
+  }
+
+  // Calls every endpoint verification uses, with the configured key and chain, without verifying anything.
+  // Returns one line per endpoint; throws if verification cannot work.
+  async preflight(): Promise<string[]> {
+    const report: string[] = [];
+
+    const source = await this.get({ module: 'contract', action: 'getsourcecode', address: PERMIT2 });
+    const sourceResult = Array.isArray(source.result) ? (source.result[0] as { SourceCode?: string }) : undefined;
+    if (source.status !== '1' || !sourceResult?.SourceCode) {
+      throw new Error(`getsourcecode failed: ${JSON.stringify(source.result)}`);
+    }
+    report.push('getsourcecode: ok');
+
+    // An unknown guid is rejected after the key is accepted.
+    const status = await this.get({ module: 'contract', action: 'checkverifystatus', guid: '0' });
+    if (String(status.result).includes('API Key')) throw new Error(`checkverifystatus failed: ${status.result}`);
+    report.push('checkverifystatus: ok');
+
+    // Submitting for an address without code is rejected before anything is queued.
+    const submit = await this.post({
+      module: 'contract',
+      action: 'verifysourcecode',
+      contractaddress: '0x0000000000000000000000000000000000000001',
+      codeformat: 'solidity-standard-json-input',
+      contractname: 'Preflight.sol:Preflight',
+      compilerversion: 'v0.8.26+commit.8a97fa7a',
+      sourceCode: '{}',
+    });
+    if (!String(submit.result).includes('Unable to locate ContractCode')) {
+      throw new Error(`verifysourcecode failed: ${submit.result}`);
+    }
+    report.push('verifysourcecode: ok');
+
+    const hasCode = await this.explorerHasBytecode(PERMIT2);
+    report.push(
+      hasCode === true
+        ? 'proxy eth_getCode: ok'
+        : 'proxy eth_getCode: not available with this key; verification submits without waiting for indexing'
+    );
+
+    return report;
   }
 
   // Exact match leaves SimilarMatch empty. A similar match names the other contract.
@@ -62,6 +118,16 @@ export default class Verifier {
     libraries: Libraries = {},
     intent = 1
   ): Promise<string> {
+    if (this.dryRun) {
+      try {
+        await this.prepare(task, name, address, constructorArguments, libraries);
+      } catch (error) {
+        this.dryRunFailures.push(`${name} at ${address}: ${error instanceof Error ? error.message : error}`);
+        throw error;
+      }
+      return this.etherscanInstance.getContractUrl(address);
+    }
+
     const response = await this.verify(task, name, address, constructorArguments, libraries);
 
     if (response.isSuccess()) {
@@ -76,6 +142,29 @@ export default class Verifier {
   }
 
   private async verify(task: Task, name: string, address: string, args: string | unknown[], libraries: Libraries = {}) {
+    const prepared = await this.prepare(task, name, address, args, libraries);
+    const { message: guid } = await this.submitWhenExplorerHasBytecode(address, prepared);
+
+    await sleep(1000);
+
+    const verificationStatus = await this.etherscanInstance.getVerificationStatus(guid);
+
+    if (verificationStatus.isFailure() || verificationStatus.isSuccess()) {
+      return verificationStatus;
+    }
+
+    throw new Error(`The API responded with an unexpected message: ${verificationStatus.message}`);
+  }
+
+  // Everything up to the request: trimmed sources, the deployed bytecode matched to the build-info, and the
+  // ABI-encoded constructor arguments.
+  private async prepare(
+    task: Task,
+    name: string,
+    address: string,
+    args: string | unknown[],
+    libraries: Libraries = {}
+  ): Promise<PreparedVerification> {
     const deployedBytecode = await Bytecode.getDeployedContractBytecode(
       address,
       this.network.provider,
@@ -111,45 +200,29 @@ export default class Verifier {
             args as any[]
           );
 
-    const { message: guid } = await this.submitWhenExplorerHasBytecode(
-      address,
-      JSON.stringify(buildInfo.input),
-      fullSourceName,
-      `v${contractInformation.solcLongVersion}`,
-      deployArgumentsEncoded
-    );
-
-    await sleep(1000);
-
-    const verificationStatus = await this.etherscanInstance.getVerificationStatus(guid);
-
-    if (verificationStatus.isFailure() || verificationStatus.isSuccess()) {
-      return verificationStatus;
-    }
-
-    throw new Error(`The API responded with an unexpected message: ${verificationStatus.message}`);
+    return {
+      sourceCode: JSON.stringify(buildInfo.input),
+      contractName: fullSourceName,
+      compilerVersion: `v${contractInformation.solcLongVersion}`,
+      constructorArguments: deployArgumentsEncoded,
+    };
   }
 
   // The RPC can already see the code while Etherscan's verify call still returns "does not have bytecode".
-  private async submitWhenExplorerHasBytecode(
-    address: string,
-    sourceCode: string,
-    contractName: string,
-    compilerVersion: string,
-    constructorArguments: string
-  ) {
+  private async submitWhenExplorerHasBytecode(address: string, prepared: PreparedVerification) {
     const deadline = Date.now() + EXPLORER_BYTECODE_TIMEOUT_MS;
     let announced = false;
 
     for (;;) {
-      if (await this.explorerHasBytecode(address)) {
+      // Unknown when the key cannot use the proxy module on this chain: submit, and retry on missing bytecode.
+      if ((await this.explorerHasBytecode(address)) !== false) {
         try {
           return await this.etherscanInstance.verify(
             address,
-            sourceCode,
-            contractName,
-            compilerVersion,
-            constructorArguments
+            prepared.sourceCode,
+            prepared.contractName,
+            prepared.compilerVersion,
+            prepared.constructorArguments
           );
         } catch (error) {
           if (!(error instanceof ContractVerificationMissingBytecodeError)) throw error;
@@ -169,27 +242,35 @@ export default class Verifier {
     }
   }
 
-  private async explorerHasBytecode(address: string): Promise<boolean> {
-    const { apiKey, apiUrl, chainId } = this.etherscanInstance;
-    const parameters = new URLSearchParams({
-      apikey: apiKey,
-      module: 'proxy',
-      action: 'eth_getCode',
-      address,
-      tag: 'latest',
-    });
-    if (chainId !== undefined) parameters.set('chainid', String(chainId));
-
-    const url = new URL(apiUrl);
-    url.search = parameters.toString();
-
+  // undefined when the explorer cannot answer, e.g. Etherscan's free plan has no proxy module on Base.
+  private async explorerHasBytecode(address: string): Promise<boolean | undefined> {
     try {
-      const response = await fetch(url);
-      const json = (await response.json()) as { result?: unknown };
-      return typeof json.result === 'string' && /^0x[0-9a-fA-F]{2,}$/.test(json.result);
+      const json = await this.get({ module: 'proxy', action: 'eth_getCode', address, tag: 'latest' });
+      if (typeof json.result !== 'string' || !json.result.startsWith('0x')) return undefined;
+      return /^0x[0-9a-fA-F]{2,}$/.test(json.result);
     } catch {
       return false;
     }
+  }
+
+  private async get(fields: Record<string, string>): Promise<{ status?: string; result?: unknown }> {
+    const url = new URL(this.etherscanInstance.apiUrl);
+    url.search = this.parameters(fields).toString();
+    return (await fetch(url)).json();
+  }
+
+  private async post(fields: Record<string, string>): Promise<{ status?: string; result?: unknown }> {
+    const url = new URL(this.etherscanInstance.apiUrl);
+    const { chainid, ...body } = Object.fromEntries(this.parameters(fields));
+    if (chainid !== undefined) url.search = new URLSearchParams({ chainid }).toString();
+    return (await fetch(url, { method: 'POST', body: new URLSearchParams(body) })).json();
+  }
+
+  private parameters(fields: Record<string, string>): URLSearchParams {
+    const { apiKey, chainId } = this.etherscanInstance;
+    const parameters = new URLSearchParams({ apikey: apiKey, ...fields });
+    if (chainId !== undefined) parameters.set('chainid', String(chainId));
+    return parameters;
   }
 
   // Trims the inputs of the build info to only keep imported files, avoiding submitting unnecessary source files for

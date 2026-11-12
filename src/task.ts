@@ -34,6 +34,8 @@ const TASKS_DIR = path.resolve(ROOT, 'tasks');
 const DEPRECATED_DIR = path.resolve(ROOT, 'deprecated');
 const SCRIPTS_DIR = path.resolve(ROOT, 'scripts');
 
+export const NO_VERIFIER_WARNING = 'Skipping contract verification, no verifier defined';
+
 export enum TaskMode {
   LIVE, // Deploys and saves outputs
   TEST, // Deploys but saves to test output
@@ -336,11 +338,13 @@ export default class Task {
 
     const task = externalTask === undefined ? this : externalTask;
     const verifier = this._verifier;
-    if (!verifier) return logger.warn('Skipping contract verification, no verifier defined');
+    if (!verifier) return logger.warn(NO_VERIFIER_WARNING);
 
     try {
       const url = await verifier.call(task, name, address, constructorArguments, libs);
-      logger.success(`Verified contract ${name} at ${url}`);
+      logger.success(
+        verifier.dryRun ? `Prepared verification of ${name}, not submitted` : `Verified contract ${name} at ${url}`
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (error instanceof ContractAlreadyVerifiedError || message.toLowerCase().includes('already verified')) {

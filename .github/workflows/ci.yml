@@ -57,7 +57,7 @@ jobs:
       - name: Prepare Config
         run: yarn ci:prepare-config
         env:
-          SEPOLIA_RPC_ENDPOINT: ${{ secrets.SEPOLIA_RPC_ENDPOINT }}
+          DRPC_API_KEY: ${{ secrets.DRPC_API_KEY }}
       - name: Test
         run: yarn test --bail
       - name: Save Forked Network Cache

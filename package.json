@@ -42,6 +42,7 @@
     "lint:typescript": "NODE_NO_WARNINGS=1 eslint . --ext .ts --ignore-path ./.eslintignore  --max-warnings 0",
     "prepack": "yarn build",
     "test": "yarn build && hardhat test",
+    "rehearse": "hardhat rehearse --fork",
     "ci:prepare-config": "ts-node ci/prepare-config.ts"
   },
   "resolutions": {

@@ -22,13 +22,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        network: [sepolia]
+        network: [sepolia, base]
     steps:
       - uses: actions/checkout@v7
       - name: Check ${{ matrix.network }} deployment addresses
         uses: ./.github/actions/check-network-deployments
         env:
-          SEPOLIA_RPC_ENDPOINT: ${{ secrets.SEPOLIA_RPC_ENDPOINT }}
+          DRPC_API_KEY: ${{ secrets.DRPC_API_KEY }}
         with:
           network-name: ${{ matrix.network }}
 
@@ -37,13 +37,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        network: [sepolia]
+        network: [sepolia, base]
     steps:
       - uses: actions/checkout@v7
       - name: Check ${{ matrix.network }} Action IDs
         uses: ./.github/actions/check-network-action-ids
         env:
-          SEPOLIA_RPC_ENDPOINT: ${{ secrets.SEPOLIA_RPC_ENDPOINT }}
+          DRPC_API_KEY: ${{ secrets.DRPC_API_KEY }}
         with:
           network-name: ${{ matrix.network }}
 
@@ -55,6 +55,8 @@ jobs:
         uses: ./.github/actions/setup
       - name: Prepare Config
         run: yarn ci:prepare-config
+        env:
+          DRPC_API_KEY: ${{ secrets.DRPC_API_KEY }}
       - name: Check Deployment Address Lookup File
         run: yarn check-address-lookup
 
