@@ -5,7 +5,7 @@ export { Artifact, Libraries } from 'hardhat/types';
 
 import Task from './task';
 
-export const NETWORKS = ['sepolia'];
+export const NETWORKS = ['sepolia', 'base'];
 
 export type Network = (typeof NETWORKS)[number];
 

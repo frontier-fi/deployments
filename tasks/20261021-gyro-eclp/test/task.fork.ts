@@ -20,7 +20,7 @@ describeForkTest('GyroECLPPool', 'sepolia', FORK_BLOCK, function () {
   });
 
   it('deploys a pool', async () => {
-    const receipt = await createMockGyroEclpPool(factory, ONES_BYTES32);
+    const receipt = await createMockGyroEclpPool(factory, task.network, ONES_BYTES32);
     await task.instanceAt('GyroECLPPool', poolCreatedAddress(factory, receipt));
   });
 

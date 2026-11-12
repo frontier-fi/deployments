@@ -1,6 +1,6 @@
 import { Contract, TransactionReceipt } from 'ethers';
 
-import { gasLimitForDeployedCode, NO_POOL_ROLES, sepoliaWethUsdc, SWAP_FEE, ZERO_ADDRESS } from '@src';
+import { gasLimitForDeployedCode, NO_POOL_ROLES, Network, SWAP_FEE, wethUsdc, ZERO_ADDRESS } from '@src';
 
 // Parameters from mainnet pool 0x2191df821c198600499aa1f0031b1a7514d7a7d9.
 export const eclpParams = {
@@ -25,11 +25,15 @@ export const MOCK_GYRO_ECLP_POOL = {
   symbol: 'MOCK',
 };
 
-export async function createMockGyroEclpPool(factory: Contract, salt: string): Promise<TransactionReceipt> {
+export async function createMockGyroEclpPool(
+  factory: Contract,
+  network: Network,
+  salt: string
+): Promise<TransactionReceipt> {
   const args = [
     MOCK_GYRO_ECLP_POOL.name,
     MOCK_GYRO_ECLP_POOL.symbol,
-    sepoliaWethUsdc(),
+    wethUsdc(network),
     eclpParams,
     derivedEclpParams,
     NO_POOL_ROLES,

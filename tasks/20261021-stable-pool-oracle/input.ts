@@ -1,4 +1,4 @@
-import { HOUR, Task, TaskMode, ZERO_ADDRESS } from '@src';
+import { HOUR, sequencerUptimeFeedByNetwork, Task, TaskMode } from '@src';
 
 export type StableLPOracleDeployment = {
   Vault: string;
@@ -19,12 +19,11 @@ const BaseVersion = { version: OracleVersion, deployment: '20261021-stable-pool-
 
 export default {
   Vault,
-  // Sepolia has no sequencer uptime feed.
-  SequencerUptimeFeed: ZERO_ADDRESS,
   UptimeResyncWindow: HOUR,
   FactoryVersion: JSON.stringify({ name: 'StableLPOracleFactory', ...BaseVersion }),
   OracleVersion,
   MockStablePool,
   ShouldUseBlockTimeForOldestFeedUpdate: false,
   ShouldRevertIfVaultUnlocked: true,
+  ...sequencerUptimeFeedByNetwork(),
 };

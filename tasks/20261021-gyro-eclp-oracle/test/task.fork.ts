@@ -26,6 +26,7 @@ describeForkTest('EclpLPOracle', 'sepolia', FORK_BLOCK, function () {
   it('deploys an oracle', async () => {
     const receipt = await createMockEclpOracle(
       factory,
+      task.network,
       pool,
       deployment.ShouldUseBlockTimeForOldestFeedUpdate,
       deployment.ShouldRevertIfVaultUnlocked
