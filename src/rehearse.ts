@@ -4,6 +4,7 @@ import { getAddress, JsonRpcProvider } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { assertForkChainId, useForkChainId } from './forkChain';
+import { setRehearsalTarget, takeLiveGasLimit } from './gas';
 import { etherscanApiKey, rpcUrl } from './networks';
 import logger, { Logger } from './logger';
 import Task, { NO_VERIFIER_WARNING, TaskMode } from './task';
@@ -24,6 +25,7 @@ type Plan = {
   directlyCreated: Set<string>;
 };
 
+// `gas` is the limit the live chain would get, which can exceed what the fork ran with.
 type RecordedTx = { hash: string; from: string; to: string | null; input: string; value: string; gas: string };
 
 // Replays the reference network's deployment on a fork of `fork`: same task order, same nonces, with the
@@ -174,6 +176,9 @@ async function runOnFork(
   await assertForkChainId(hre, fork);
   await hre.network.provider.send('hardhat_impersonateAccount', [plan.deployer]);
   await hre.network.provider.send('hardhat_setBalance', [plan.deployer, REHEARSAL_BALANCE]);
+  // Hardhat only executes on forked blocks of chains whose hardfork history it knows. When the first task is already
+  // deployed nothing else mines a block, so the next call would land on the forked block itself.
+  await hre.network.provider.send('hardhat_mine', ['0x1']);
 
   const burns = new Set(plan.steps.filter((step) => step.taskId === undefined).map((step) => step.nonce));
   const nonce = async () =>
@@ -186,20 +191,25 @@ async function runOnFork(
   // Signing at a nonce that must be burned plays a Ledger rejection: the task stops, the nonce is burned, the task
   // is run again and resumes from its saved outputs.
   const hashes: string[] = [];
+  // A gas limit a task chose for the live chain, where the fork had to run with a lower one (see src/gas.ts).
+  const liveGasLimits = new Map<string, bigint>();
   const provider = hre.ethers.provider as unknown as { send: (method: string, params: unknown[]) => Promise<unknown> };
   const send = provider.send.bind(provider);
   provider.send = async (method, params) => {
     if (method === 'eth_accounts') return [plan.deployer];
     if (method !== 'eth_sendTransaction') return send(method, params);
 
-    const { from } = (params as { from: string }[])[0];
+    const { from, gas } = (params as { from: string; gas?: string }[])[0];
     if (from.toLowerCase() === plan.deployer.toLowerCase() && burns.has(await nonce())) {
       throw new Error(`${REJECTED} at nonce ${await nonce()}`);
     }
+    const liveGasLimit = takeLiveGasLimit(gas === undefined ? undefined : BigInt(gas));
     const hash = (await send(method, params)) as string;
     hashes.push(hash);
+    if (liveGasLimit !== undefined) liveGasLimits.set(hash, liveGasLimit);
     return hash;
   };
+  setRehearsalTarget(forkUrl);
 
   // With --skip-verification the tasks run without a verifier, and Task.verify warns once per contract about that;
   // report it once instead.
@@ -232,12 +242,16 @@ async function runOnFork(
 
       const expected = Math.max(...plan.steps.filter((step) => step.taskId === id).map((step) => step.nonce)) + 1;
       const actual = await nonce();
-      if (actual !== expected) throw new Error(`After ${id} the deployer nonce is ${actual}, expected ${expected}`);
+      // A task that finished before this rehearsal (all its nonces below the starting one) sends nothing.
+      if (expected > startNonce && actual !== expected) {
+        throw new Error(`After ${id} the deployer nonce is ${actual}, expected ${expected}`);
+      }
       logger.success(`${id} done, nonce ${actual}`);
     }
   } finally {
     provider.send = send;
     logger.warn = warn;
+    setRehearsalTarget(undefined);
   }
   // Resumed tasks verify their earlier contracts again, so this counts calls, not contracts.
   if (unverified > 0) logger.log(`Skipped ${unverified} explorer verification calls`, 'ℹ️ ');
@@ -245,7 +259,9 @@ async function runOnFork(
   const recorded: RecordedTx[] = [];
   for (const hash of hashes) {
     const tx = (await hre.network.provider.send('eth_getTransactionByHash', [hash])) as RecordedTx & { nonce: string };
-    recorded.push({ hash, from: tx.from, to: tx.to, input: tx.input, value: tx.value, gas: tx.gas });
+    const liveGasLimit = liveGasLimits.get(hash);
+    const gas = liveGasLimit === undefined ? tx.gas : `0x${liveGasLimit.toString(16)}`;
+    recorded.push({ hash, from: tx.from, to: tx.to, input: tx.input, value: tx.value, gas });
   }
   return recorded;
 }
@@ -275,6 +291,10 @@ function compareAddresses(plan: Plan, reference: Network, fork: Network): number
 }
 
 async function simulateLive(url: string, txs: RecordedTx[]): Promise<void> {
+  if (txs.length === 0) {
+    logger.log('Nothing left to send on the live chain', '');
+    return;
+  }
   const provider = new JsonRpcProvider(url);
   const from = txs[0].from;
   const startNonce = await provider.getTransactionCount(from, 'latest');

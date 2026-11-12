@@ -2,7 +2,7 @@ import hre from 'hardhat';
 import { keccak256 } from 'ethers';
 
 import { VaultFactoryDeployment } from './input';
-import { Task, TaskRunOptions } from '@src';
+import { gasLimitFor, targetHasStateGas, Task, TaskRunOptions } from '@src';
 
 export default async (task: Task, { force, from }: TaskRunOptions = {}): Promise<void> => {
   const input = task.input() as VaultFactoryDeployment;
@@ -82,15 +82,9 @@ export default async (task: Task, { force, from }: TaskRunOptions = {}): Promise
 
 // Glamsterdam charges code deposit from a state-gas reservoir, which is only the
 // part of the gas limit above the 16,777,216 execution cap. 120e6 covers the
-// three Vault runtimes. yarn test runs in Hardhat, whose schedule is still the
-// old one and which rejects a limit above that cap, so it keeps 15e6.
+// three Vault runtimes. Hardhat's schedule is still the old one and it rejects a
+// limit above that cap, so forks run with 15e6; a rehearsal replays the live limit.
 async function createGasLimit(): Promise<number> {
-  if (hre.network.name === 'hardhat') return 15e6;
-
-  const block = (await hre.network.provider.request({
-    method: 'eth_getBlockByNumber',
-    params: ['latest', false],
-  })) as { blockAccessListHash?: string | null };
-
-  return block?.blockAccessListHash ? 120e6 : 15e6;
+  const live = (await targetHasStateGas(hre)) ? 120e6 : 15e6;
+  return gasLimitFor(hre, { live, fork: 15e6 });
 }

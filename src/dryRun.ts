@@ -47,6 +47,9 @@ export async function dryRun(
     params: [{ forking: { jsonRpcUrl: forkUrl } }],
   });
   await assertForkChainId(hre, network);
+  // Hardhat only executes on forked blocks of chains whose hardfork history it knows, so a task that reads before it
+  // deploys needs a local block first. Mined before the base fee override, which applies to the next block.
+  await hre.network.provider.send('hardhat_mine', ['0x1']);
   await hre.network.provider.send('hardhat_setNextBlockBaseFeePerGas', ['0x0']);
   await hre.network.provider.request({ method: 'hardhat_setLoggingEnabled', params: [true] });
   await registerTaskBuildInfo(hre, task);
