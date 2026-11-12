@@ -7,6 +7,7 @@ Active tasks go in `tasks/`, one-off scripts in `scripts/`, and replaced tasks i
 Configured networks:
 
 - `sepolia` (chain id 11155111)
+- `base` (chain id 8453)
 
 ## Active Deployments
 

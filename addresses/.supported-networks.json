@@ -2,5 +2,9 @@
   "sepolia": {
     "chainId": 11155111,
     "block-explorer": "https://sepolia.etherscan.io"
+  },
+  "base": {
+    "chainId": 8453,
+    "block-explorer": "https://basescan.org"
   }
 }
