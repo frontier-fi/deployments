@@ -2,6 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { getAddress, JsonRpcProvider } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
+import { HardhatContext } from 'hardhat/internal/context';
+import { createProvider } from 'hardhat/internal/core/providers/construction';
 
 import { assertForkChainId, useForkChainId } from './forkChain';
 import { setRehearsalTarget, takeLiveGasLimit } from './gas';
@@ -48,6 +50,7 @@ export async function rehearse(
   const verifier = args.skipVerification ? undefined : await dryRunVerifier(hre, fork, args.key);
 
   const plan = await buildPlan(hre, reference);
+  await assertSigner(hre, fork, plan.deployer);
   printPlan(plan, fork);
 
   const files = snapshotOutputs(fork);
@@ -87,6 +90,22 @@ async function dryRunVerifier(hre: HardhatRuntimeEnvironment, fork: Network, key
   logger.log(`Explorer ${browserUrl} via ${apiUrl}${chainId === undefined ? '' : ` (chainid ${chainId})`}`, '');
   for (const line of await verifier.preflight()) logger.log(`  ${line}`, '');
   return verifier;
+}
+
+// The fork run impersonates the deployer, so it never touches the signer yarn deploy uses. Build the provider
+// `--network <fork>` would get, plugins included, and check that it offers the deployer. Listing accounts does not
+// open the Ledger.
+async function assertSigner(hre: HardhatRuntimeEnvironment, fork: Network, deployer: string): Promise<void> {
+  const { providerExtenders } = HardhatContext.getHardhatContext();
+  const provider = await createProvider(hre.config, fork, hre.artifacts, providerExtenders);
+  const accounts = (await provider.request({ method: 'eth_accounts' })) as string[];
+  if (!accounts.some((account) => account.toLowerCase() === deployer.toLowerCase())) {
+    throw new Error(
+      `yarn deploy --network ${fork} would sign with [${accounts.join(', ')}], not the deployer ${deployer}. ` +
+        'Check DEPLOYER_PRIVATE_KEY and LEDGER_ACCOUNT.'
+    );
+  }
+  logger.log(`Signer ${deployer} available on ${fork}`, '');
 }
 
 function parseNetwork(name: string): Network {
