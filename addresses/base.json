@@ -1,1 +1,150 @@
-{}
+{
+  "20261013-authorizer": {
+    "contracts": [
+      {
+        "name": "Authorizer",
+        "address": "0xEdFdDa22252399BDDAeE8d6D8e93c32cA3c31eeE"
+      }
+    ],
+    "status": "ACTIVE"
+  },
+  "20261016-vault": {
+    "contracts": [
+      {
+        "name": "VaultFactory",
+        "address": "0x2621Def28C3EF11Bd8d5D1670E45B22494fBb54e"
+      },
+      {
+        "name": "ProtocolFeeController",
+        "address": "0x9497e26dE55Af5C87Da7F4f57EbEbAFF0DDaBc1B"
+      },
+      {
+        "name": "VaultAdmin",
+        "address": "0x06d62a054D4f18Fa5cCf3C4E893e2cD8878F9007"
+      },
+      {
+        "name": "VaultExtension",
+        "address": "0xd883460167DB9a68B85ee0A3937b75a2B38d1B8E"
+      },
+      {
+        "name": "Vault",
+        "address": "0xFF00009C1A83Ec25434522ef355b99e9a70000FF"
+      }
+    ],
+    "status": "ACTIVE"
+  },
+  "20261019-batch-router": {
+    "contracts": [
+      {
+        "name": "BatchRouter",
+        "address": "0x7D08bc34e444848983227E266F61146A7e935A94"
+      }
+    ],
+    "status": "ACTIVE"
+  },
+  "20261019-router": {
+    "contracts": [
+      {
+        "name": "Router",
+        "address": "0xB3C45499aa0ad2fF5d586E7d473C75d5781c557B"
+      }
+    ],
+    "status": "ACTIVE"
+  },
+  "20261020-buffer-router": {
+    "contracts": [
+      {
+        "name": "BufferRouter",
+        "address": "0xf921Cc4B31417eED5FD1B82B15B8b5549b605630"
+      }
+    ],
+    "status": "ACTIVE"
+  },
+  "20261020-composite-liquidity-router": {
+    "contracts": [
+      {
+        "name": "CompositeLiquidityRouter",
+        "address": "0x96Eb97f030C04A98EF83191d9704e5Ba7836Bf3D"
+      }
+    ],
+    "status": "ACTIVE"
+  },
+  "20261021-gyro-eclp": {
+    "contracts": [
+      {
+        "name": "GyroECLPPoolFactory",
+        "address": "0xED6D268cAdBea94c34E531C3401d41a882D66A8D"
+      },
+      {
+        "name": "MockGyroECLPPool",
+        "address": "0x15Bf0f707D72BC071E42A25d35ed025461E5F6C1"
+      }
+    ],
+    "status": "ACTIVE"
+  },
+  "20261021-gyro-eclp-oracle": {
+    "contracts": [
+      {
+        "name": "EclpLPOracleFactory",
+        "address": "0x38c0CD8D4A868c7123E0E2eC1C0fAD8614E1E1D9"
+      },
+      {
+        "name": "MockEclpLPOracle",
+        "address": "0x582A99997F4F7F69Ce2aBaF80829E5198Ecf532C"
+      }
+    ],
+    "status": "ACTIVE"
+  },
+  "20261021-stable-pool": {
+    "contracts": [
+      {
+        "name": "StablePoolFactory",
+        "address": "0xB74Fe587fad28adbf152b511E199665D56D40755"
+      },
+      {
+        "name": "MockStablePool",
+        "address": "0x08AcB7bdbA48D4d1e0b632576EF0f54E45FE0e53"
+      }
+    ],
+    "status": "ACTIVE"
+  },
+  "20261021-stable-pool-oracle": {
+    "contracts": [
+      {
+        "name": "StableLPOracleFactory",
+        "address": "0xB60578a04b839Bb22974D377d3BEC5abAE52362F"
+      },
+      {
+        "name": "MockStableLPOracle",
+        "address": "0xfb89075a1f295de0C417d1e08284BF9Aac841c05"
+      }
+    ],
+    "status": "ACTIVE"
+  },
+  "20261021-weighted-pool": {
+    "contracts": [
+      {
+        "name": "WeightedPoolFactory",
+        "address": "0xC55Ea8a9de28CEDd9Eb1384CecD0D0437B71aB9a"
+      },
+      {
+        "name": "MockWeightedPool",
+        "address": "0x56D8919DdAdB588f29AcF0a0Dca4a22A6d6331CD"
+      }
+    ],
+    "status": "ACTIVE"
+  },
+  "20261021-weighted-pool-oracle": {
+    "contracts": [
+      {
+        "name": "WeightedLPOracleFactory",
+        "address": "0x5f3B2aEDF750372C784e2b5ab8A52Dc46273972d"
+      },
+      {
+        "name": "MockWeightedLPOracle",
+        "address": "0x33D1DA2285Ca09a8Ed9906cc7158fAd476329732"
+      }
+    ],
+    "status": "ACTIVE"
+  }
+}

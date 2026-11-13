@@ -1,5 +1,54 @@
 {
-  "base": {},
+  "base": {
+    "ACTIVE": {
+      "20261013-authorizer": {
+        "Authorizer": "0xEdFdDa22252399BDDAeE8d6D8e93c32cA3c31eeE"
+      },
+      "20261016-vault": {
+        "VaultFactory": "0x2621Def28C3EF11Bd8d5D1670E45B22494fBb54e",
+        "ProtocolFeeController": "0x9497e26dE55Af5C87Da7F4f57EbEbAFF0DDaBc1B",
+        "VaultAdmin": "0x06d62a054D4f18Fa5cCf3C4E893e2cD8878F9007",
+        "VaultExtension": "0xd883460167DB9a68B85ee0A3937b75a2B38d1B8E",
+        "Vault": "0xFF00009C1A83Ec25434522ef355b99e9a70000FF"
+      },
+      "20261019-batch-router": {
+        "BatchRouter": "0x7D08bc34e444848983227E266F61146A7e935A94"
+      },
+      "20261019-router": {
+        "Router": "0xB3C45499aa0ad2fF5d586E7d473C75d5781c557B"
+      },
+      "20261020-buffer-router": {
+        "BufferRouter": "0xf921Cc4B31417eED5FD1B82B15B8b5549b605630"
+      },
+      "20261020-composite-liquidity-router": {
+        "CompositeLiquidityRouter": "0x96Eb97f030C04A98EF83191d9704e5Ba7836Bf3D"
+      },
+      "20261021-gyro-eclp": {
+        "GyroECLPPoolFactory": "0xED6D268cAdBea94c34E531C3401d41a882D66A8D",
+        "MockGyroECLPPool": "0x15Bf0f707D72BC071E42A25d35ed025461E5F6C1"
+      },
+      "20261021-gyro-eclp-oracle": {
+        "EclpLPOracleFactory": "0x38c0CD8D4A868c7123E0E2eC1C0fAD8614E1E1D9",
+        "MockEclpLPOracle": "0x582A99997F4F7F69Ce2aBaF80829E5198Ecf532C"
+      },
+      "20261021-stable-pool": {
+        "StablePoolFactory": "0xB74Fe587fad28adbf152b511E199665D56D40755",
+        "MockStablePool": "0x08AcB7bdbA48D4d1e0b632576EF0f54E45FE0e53"
+      },
+      "20261021-stable-pool-oracle": {
+        "StableLPOracleFactory": "0xB60578a04b839Bb22974D377d3BEC5abAE52362F",
+        "MockStableLPOracle": "0xfb89075a1f295de0C417d1e08284BF9Aac841c05"
+      },
+      "20261021-weighted-pool": {
+        "WeightedPoolFactory": "0xC55Ea8a9de28CEDd9Eb1384CecD0D0437B71aB9a",
+        "MockWeightedPool": "0x56D8919DdAdB588f29AcF0a0Dca4a22A6d6331CD"
+      },
+      "20261021-weighted-pool-oracle": {
+        "WeightedLPOracleFactory": "0x5f3B2aEDF750372C784e2b5ab8A52Dc46273972d",
+        "MockWeightedLPOracle": "0x33D1DA2285Ca09a8Ed9906cc7158fAd476329732"
+      }
+    }
+  },
   "sepolia": {
     "ACTIVE": {
       "20261013-authorizer": {
