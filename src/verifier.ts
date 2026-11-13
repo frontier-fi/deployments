@@ -17,6 +17,9 @@ import Sourcify from './sourcify';
 const EXPLORER_BYTECODE_POLL_MS = 5_000;
 // Etherscan's verify endpoint rejects a contract until its backend has indexed the bytecode.
 const EXPLORER_BYTECODE_TIMEOUT_MS = 180_000;
+// Also returned for a wrong submission, which is then retried until the timeout before it fails.
+const CREATION_CODE_NOT_INDEXED = 'does NOT match the transaction deployment bytecode';
+const CREATION_CODE_POLL_MS = 15_000;
 
 // Deployed on every chain this repo targets, and verified on each explorer.
 const PERMIT2 = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
@@ -150,14 +153,37 @@ export default class Verifier {
   }
 
   private async verifyOnEtherscan(address: string, prepared: PreparedVerification): Promise<string> {
-    const { message: guid } = await this.submitToEtherscan(address, prepared);
+    const deadline = Date.now() + EXPLORER_BYTECODE_TIMEOUT_MS;
+    let announced = false;
 
-    // The new guid is not always queryable at once. getVerificationStatus then polls while it is pending.
-    await sleep(1000);
-    const status = await this.etherscanInstance.getVerificationStatus(guid);
-    if (status.isSuccess()) return this.etherscanInstance.getContractUrl(address);
-    // Includes "Already Verified", which Task.verify reports as a notice.
-    throw new Error(`The contract verification failed. Reason: ${status.message}`);
+    for (;;) {
+      const { message: guid } = await this.submitToEtherscan(address, prepared);
+
+      // The new guid is not always queryable at once. getVerificationStatus then polls while it is pending.
+      await sleep(1000);
+      let message: string;
+      try {
+        const status = await this.etherscanInstance.getVerificationStatus(guid);
+        if (status.isSuccess()) return this.etherscanInstance.getContractUrl(address);
+        message = status.message;
+      } catch (error) {
+        // A failed status throws (ContractStatusPollingResponseNotOkError), matched by message like the others.
+        if (!(error instanceof Error)) throw error;
+        message = error.message;
+      }
+
+      // A contract created by a factory is compared with the creation code of the internal transaction that made it.
+      // Until Etherscan has indexed that transaction, it reports a mismatch.
+      if (!message.includes(CREATION_CODE_NOT_INDEXED) || Date.now() >= deadline) {
+        // Includes "Already Verified", which Task.verify reports as a notice.
+        throw new Error(`The contract verification failed. Reason: ${message}`);
+      }
+      if (!announced) {
+        logger.log(`Waiting for Etherscan to index the transaction that created ${address}`, '⏳', 'yellow');
+        announced = true;
+      }
+      await sleep(CREATION_CODE_POLL_MS);
+    }
   }
 
   private async verifyOnSourcify(name: string, address: string, prepared: PreparedVerification): Promise<void> {
