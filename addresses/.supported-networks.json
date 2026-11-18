@@ -8,5 +8,10 @@
     "chainId": 8453,
     "block-explorer": "https://basescan.org",
     "drpc": "base"
+  },
+  "ethereum": {
+    "chainId": 1,
+    "block-explorer": "https://etherscan.io",
+    "drpc": "ethereum"
   }
 }
