@@ -95,7 +95,7 @@ Networks are defined in the repo. Secrets and the signer come from environment v
 
 The Ledger is only opened to sign. Unlock it and open the Ethereum app before deploying. Contract deployment prompts for blind signing. `yarn test` does not use these accounts. It forks through the in-process Hardhat network.
 
-`addresses/.supported-networks.json` is the list of networks: chain id, block explorer and dRPC name. `sepolia` is chain id 11155111 and `base` is 8453. To add a chain, add it there and give the per-network constants in `src/constants.ts` (WETH, USDC, constant price feed, sequencer uptime feed) a value for it. Chains the verifier does not already know also need an `etherscan.customChains` entry in `hardhat.config.ts`.
+`addresses/.supported-networks.json` is the list of networks: chain id, block explorer and dRPC name. `sepolia` is chain id 11155111, `base` is 8453 and `ethereum` is 1. To add a chain, add it there and give the per-network constants in `src/constants.ts` (WETH, USDC, constant price feed, sequencer uptime feed) and the Authorizer admin in `tasks/20261013-authorizer/input.ts` a value for it. Chains the verifier does not already know also need an `etherscan.customChains` entry in `hardhat.config.ts`.
 
 ### `deploy`
 
