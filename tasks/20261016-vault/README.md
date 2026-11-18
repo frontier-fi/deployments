@@ -6,6 +6,7 @@ Bytecode for the factory and ProtocolFeeController are from the newer [e1ae7f09]
 
 ## Useful files
 
+- [Ethereum addresses](./output/ethereum.json)
 - [Base addresses](./output/base.json)
 - [Sepolia addresses](./output/sepolia.json)
 - [`VaultFactory` artifact](./artifact/VaultFactory.json)
