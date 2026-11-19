@@ -74,7 +74,18 @@ export default class Sourcify {
   }
 }
 
+// contract_not_deployed and cannot_fetch_bytecode mean Sourcify's RPC has not seen the contract yet.
+const TRANSIENT_CODES = [
+  'contract_not_deployed',
+  'cannot_fetch_bytecode',
+  'internal_error',
+  'too_many_requests',
+  '429',
+  '500',
+  '502',
+  '503',
+];
+
 function isTransient(error: SourcifyError): boolean {
-  if (['internal_error', 'too_many_requests', '429', '500', '502', '503'].includes(error.customCode)) return true;
-  return /not deployed|no bytecode|bytecode.*(empty|not found)|does not have code/i.test(error.message);
+  return TRANSIENT_CODES.includes(error.customCode);
 }
