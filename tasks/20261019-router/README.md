@@ -8,6 +8,7 @@ Bytecode is from [577b86c7](https://github.com/balancer/balancer-v3-monorepo/com
 
 ## Useful files
 
+- [Ethereum addresses](./output/ethereum.json)
 - [Base addresses](./output/base.json)
 - [Sepolia addresses](./output/sepolia.json)
 - [`Router` artifact](./artifact/Router.json)
