@@ -15,4 +15,7 @@ export default {
   monad: {
     admin: '0xAD2906fAf5eFEC651f54372b121414FF0EeC6B1D',
   },
+  'monad-testnet': {
+    admin: '0xAD2906fAf5eFEC651f54372b121414FF0EeC6B1D',
+  },
 };

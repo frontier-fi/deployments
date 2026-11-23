@@ -328,6 +328,11 @@ export default {
         chainId: 143,
         urls: { apiURL: 'https://api.etherscan.io/v2/api', browserURL: 'https://monadscan.com' },
       },
+      {
+        network: 'monad-testnet',
+        chainId: 10143,
+        urls: { apiURL: 'https://api.etherscan.io/v2/api', browserURL: 'https://testnet.monadscan.com' },
+      },
     ],
   },
 };

@@ -19,5 +19,11 @@
     "block-explorer": "https://monadvision.com",
     "drpc": "monad",
     "sourcify": "https://sourcify-api-monad.blockvision.org"
+  },
+  "monad-testnet": {
+    "chainId": 10143,
+    "block-explorer": "https://testnet.monadvision.com",
+    "drpc": "monad-testnet",
+    "sourcify": "https://sourcify-api-monad.blockvision.org"
   }
 }

@@ -28,6 +28,7 @@ export const WETH: Record<Network, string> = {
   base: '0x4200000000000000000000000000000000000006',
   ethereum: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
   monad: '0x3bd359C1119dA7Da1D913D1C4D2B7c461115433A',
+  'monad-testnet': '0xFb8bf4c1CC7a94c73D209a149eA2AbEa852BC541',
 };
 
 // Circle USDC. Distinct from the Aave test USDC.
@@ -36,6 +37,7 @@ export const USDC: Record<Network, string> = {
   base: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
   ethereum: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
   monad: '0x754704Bc059F8C67012fEd69BC8A327a5aafb603',
+  'monad-testnet': '0x534b2f3A21130d7a60830c2Df862319e593943A3',
 };
 
 // Balancer's constant price feed, from its 20250813-v3-constant-price-feed task. It always returns 1, which is
@@ -45,6 +47,9 @@ export const CONSTANT_PRICE_FEED: Record<Network, string> = {
   base: '0x1CD776897ef4f647bf8241Ec69549e4A9cb1D608',
   ethereum: '0x99364f84d1C68d87aEAD0CE92eB47409A0C52c58',
   monad: '0x5DbAd78818D4c8958EfF2d5b95b28385A22113Cd',
+  // Not deployed by Balancer: the Monad feed's runtime, created through the deterministic deployer at 0x4e59…956c
+  // with a zero salt.
+  'monad-testnet': '0xbeBca9e95eAb7e4Eda10810826D8a547e3BA594A',
 };
 
 // Chainlink L2 sequencer uptime feed. Sepolia, Ethereum and Monad have none.
@@ -53,6 +58,7 @@ export const SEQUENCER_UPTIME_FEED: Record<Network, string> = {
   base: '0xBCF85224fc0756B9Fa45aA7892530B47e10b6433',
   ethereum: ZERO_ADDRESS,
   monad: ZERO_ADDRESS,
+  'monad-testnet': ZERO_ADDRESS,
 };
 
 // Aave v3. The static aToken is the ERC4626 whose asset is Aave USDC.
