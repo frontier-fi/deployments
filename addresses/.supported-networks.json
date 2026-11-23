@@ -16,7 +16,8 @@
   },
   "monad": {
     "chainId": 143,
-    "block-explorer": "https://monadscan.com",
-    "drpc": "monad"
+    "block-explorer": "https://monadvision.com",
+    "drpc": "monad",
+    "sourcify": "https://sourcify-api-monad.blockvision.org"
   }
 }

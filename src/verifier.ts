@@ -13,6 +13,7 @@ import { Bytecode } from '@nomicfoundation/hardhat-verify/internal/solc/bytecode
 import { ChainConfig } from '@nomicfoundation/hardhat-verify/types';
 import logger from './logger';
 import Sourcify from './sourcify';
+import { SUPPORTED_NETWORKS } from './networks';
 
 const EXPLORER_BYTECODE_POLL_MS = 5_000;
 // Etherscan's verify endpoint rejects a contract until its backend has indexed the bytecode.
@@ -55,9 +56,9 @@ export default class Verifier {
   // Prepare each request (sources, bytecode match, constructor arguments) without submitting it.
   dryRun: boolean;
   dryRunFailures: string[] = [];
-  // Second verifier, best effort. Etherscan decides whether verification succeeded.
-  sourcify: Sourcify | undefined;
-  private sourcifySupported: Promise<boolean> | undefined;
+  // sourcify.dev, then the network's own Sourcify server if it has one. Best effort: Etherscan decides whether
+  // verification succeeded.
+  sourcify: Sourcify[];
 
   // A single key selects Etherscan's v2 API, which serves every chain.
   constructor(
@@ -70,7 +71,9 @@ export default class Verifier {
     this.dryRun = dryRun;
 
     this.etherscanInstance = Etherscan.fromChainConfig(_apiKey, _chainConfig);
-    this.sourcify = sourcify ? new Sourcify(_chainConfig.chainId) : undefined;
+    const chainId = _chainConfig.chainId;
+    const server = Object.values(SUPPORTED_NETWORKS).find((info) => info.chainId === chainId)?.sourcify;
+    this.sourcify = sourcify ? [new Sourcify(chainId), ...(server ? [new Sourcify(chainId, server)] : [])] : [];
   }
 
   // Calls every endpoint verification uses, with the configured key and chain, without verifying anything.
@@ -105,11 +108,11 @@ export default class Verifier {
     }
     report.push('verifysourcecode: ok');
 
-    if (this.sourcify !== undefined) {
+    for (const sourcify of this.sourcify) {
       report.push(
-        (await this.isSourcifySupported())
-          ? `sourcify: chain ${this.sourcify.chainId} supported`
-          : `sourcify: chain ${this.sourcify.chainId} not supported, skipped`
+        (await sourcify.isChainSupported())
+          ? `sourcify (${sourcify.name}): chain ${sourcify.chainId} supported`
+          : `sourcify (${sourcify.name}): chain ${sourcify.chainId} not supported, skipped`
       );
     }
 
@@ -187,23 +190,22 @@ export default class Verifier {
   }
 
   private async verifyOnSourcify(name: string, address: string, prepared: PreparedVerification): Promise<void> {
-    if (this.sourcify === undefined || !(await this.isSourcifySupported())) return;
-    try {
-      const match = await this.sourcify.verify(address, {
-        stdJsonInput: prepared.input,
-        compilerVersion: prepared.solcLongVersion,
-        contractIdentifier: prepared.contractName,
-      });
-      logger.success(`Sourcify: ${name} ${match.replace('_', ' ')} at ${this.sourcify.contractUrl(address)}`);
-    } catch (error) {
-      logger.warn(`Sourcify could not verify ${name} at ${address}: ${error instanceof Error ? error.message : error}`);
+    for (const sourcify of this.sourcify) {
+      if (!(await sourcify.isChainSupported())) continue;
+      try {
+        const match = await sourcify.verify(address, {
+          stdJsonInput: prepared.input,
+          compilerVersion: prepared.solcLongVersion,
+          contractIdentifier: prepared.contractName,
+        });
+        logger.success(
+          `Sourcify (${sourcify.name}): ${name} ${match.replace('_', ' ')} at ${sourcify.contractUrl(address)}`
+        );
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : error;
+        logger.warn(`Sourcify (${sourcify.name}) could not verify ${name} at ${address}: ${reason}`);
+      }
     }
-  }
-
-  private isSourcifySupported(): Promise<boolean> {
-    if (this.sourcify === undefined) return Promise.resolve(false);
-    this.sourcifySupported ??= this.sourcify.isChainSupported().catch(() => false);
-    return this.sourcifySupported;
   }
 
   // Everything up to the request: trimmed sources, the deployed bytecode matched to the build-info, and the

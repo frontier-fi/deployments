@@ -2,7 +2,8 @@ import fs from 'fs';
 import path from 'path';
 
 // The one list of supported networks. `drpc` is dRPC's name for the chain: https://drpc.org/chainlist
-export type NetworkInfo = { chainId: number; 'block-explorer': string; drpc: string };
+// `sourcify` is a Sourcify server to verify on besides sourcify.dev, for an explorer that runs its own (MonadVision).
+export type NetworkInfo = { chainId: number; 'block-explorer': string; drpc: string; sourcify?: string };
 
 export const SUPPORTED_NETWORKS: Record<string, NetworkInfo> = JSON.parse(
   fs.readFileSync(path.resolve(__dirname, '../addresses/.supported-networks.json'), 'utf8')
