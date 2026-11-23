@@ -122,6 +122,38 @@ async function assertSigner(hre: HardhatRuntimeEnvironment, fork: Network, deplo
   logger.log(`Signer ${deployer} available on ${fork}`, '');
 }
 
+// `yarn deploy` prints each transaction's nonce before it goes to the signer. A nonce the task did not use on the
+// reference network was spent there on a failed transaction: reject it, burn it, and run the task again.
+export async function checkNonces(
+  hre: HardhatRuntimeEnvironment,
+  id: string,
+  reference: Network = 'sepolia'
+): Promise<void> {
+  const deploymentTxs: Record<string, string> = JSON.parse(
+    fs.readFileSync(path.join(DEPLOYMENT_TXS_DIRECTORY, `${reference}.json`), 'utf8')
+  );
+  const provider = new JsonRpcProvider(rpcUrl(reference));
+  const output = new Task(id, TaskMode.READ_ONLY, reference).output({ ensure: false });
+  const hashes = [...new Set(Object.values(output).map((address) => deploymentTxs[address]))].filter(Boolean);
+  const nonces = (await Promise.all(hashes.map((hash) => provider.getTransaction(hash)))).map((tx) => tx?.nonce);
+
+  const network = hre.network.provider;
+  const request = network.request.bind(network);
+  network.request = async (args) => {
+    if (args.method === 'eth_sendTransaction') {
+      const [tx] = args.params as { from: string; nonce?: string }[];
+      const nonce = Number(
+        tx.nonce ?? (await request({ method: 'eth_getTransactionCount', params: [tx.from, 'pending'] }))
+      );
+      if (nonces.includes(nonce)) logger.log(`Signing at nonce ${nonce}, as on ${reference}`, '🔢');
+      else logger.warn(`Signing at nonce ${nonce}, which ${id} did not use on ${reference}: reject, then burn it`);
+    }
+    return request(args);
+  };
+  // hardhat-ethers calls `send`, which goes to the inner provider and would skip the check above.
+  network.send = (method: string, params?: unknown[]) => network.request({ method, params });
+}
+
 function parseNetwork(name: string): Network {
   if (!NETWORKS.includes(name as Network)) throw new Error(`Unknown network ${name}`);
   return name as Network;

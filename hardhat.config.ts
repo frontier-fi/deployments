@@ -14,7 +14,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import { checkArtifact, extractArtifact } from './src/artifact';
 import test from './src/test';
 import { dryRunAll } from './src/dryRun';
-import { rehearse } from './src/rehearse';
+import { checkNonces, rehearse } from './src/rehearse';
 import Task, { TaskMode } from './src/task';
 import { createVerifier } from './src/verifier';
 import logger, { Logger } from './src/logger';
@@ -56,6 +56,7 @@ task('deploy', 'Run deployment task')
 
       const apiKey = args.key ?? etherscanApiKey();
       const verifier = apiKey ? await createVerifier(hre, hre.network.name, apiKey) : undefined;
+      await checkNonces(hre, args.id);
       await new Task(args.id, TaskMode.LIVE, hre.network.name, verifier).run(args);
     }
   );
