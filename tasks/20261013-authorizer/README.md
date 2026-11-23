@@ -8,5 +8,6 @@ The source is [`Authorizer.sol` at `1b23f229`](https://github.com/balancer/balan
 
 - [Ethereum addresses](./output/ethereum.json)
 - [Base addresses](./output/base.json)
+- [Monad addresses](./output/monad.json)
 - [Sepolia addresses](./output/sepolia.json)
 - [`Authorizer` artifact](./artifact/Authorizer.json)

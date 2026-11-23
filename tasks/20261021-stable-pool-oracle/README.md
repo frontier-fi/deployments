@@ -14,6 +14,7 @@ Bytecode is from [c1cd3696](https://github.com/balancer/balancer-v3-monorepo/com
 
 - [Ethereum addresses](./output/ethereum.json)
 - [Base addresses](./output/base.json)
+- [Monad addresses](./output/monad.json)
 - [Sepolia addresses](./output/sepolia.json)
 - [`StableLPOracleFactory` artifact](./artifact/StableLPOracleFactory.json)
 - [`StableLPOracle` artifact](./artifact/StableLPOracle.json)
