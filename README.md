@@ -9,6 +9,7 @@ Configured networks:
 - `sepolia` (chain id 11155111)
 - `base` (chain id 8453)
 - `ethereum` (chain id 1)
+- `monad` (chain id 143)
 
 ## Active Deployments
 

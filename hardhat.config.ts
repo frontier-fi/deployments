@@ -320,6 +320,13 @@ export default {
     timeout: 600000,
   },
   etherscan: {
-    customChains: [],
+    // Chains hardhat-verify does not know. With a single key it calls Etherscan's v2 API, so apiURL goes unused.
+    customChains: [
+      {
+        network: 'monad',
+        chainId: 143,
+        urls: { apiURL: 'https://api.etherscan.io/v2/api', browserURL: 'https://monadscan.com' },
+      },
+    ],
   },
 };

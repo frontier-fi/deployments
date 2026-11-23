@@ -27,8 +27,22 @@ type Plan = {
   directlyCreated: Set<string>;
 };
 
-// `gas` is the limit the live chain would get, which can exceed what the fork ran with.
-type RecordedTx = { hash: string; from: string; to: string | null; input: string; value: string; gas: string };
+// `gas` is the limit the live chain would get, which can exceed what the fork ran with. `estimated` is a transaction
+// sent without a limit, which yarn deploy sends with the live chain's estimate.
+type RecordedTx = {
+  hash: string;
+  from: string;
+  to: string | null;
+  input: string;
+  value: string;
+  gas: string;
+  estimated: boolean;
+  forkGasUsed: string;
+};
+
+// On a chain that charges the gas limit, an estimated transaction is simulated again with the fork's gas used plus
+// this margin as its limit.
+const ESTIMATE_MARGIN_PERCENT = 110n;
 
 // Replays the reference network's deployment on a fork of `fork`: same task order, same nonces, with the
 // reference's failed nonces burned by 0-value self-transfers. Each contract's explorer verification is prepared but
@@ -212,6 +226,9 @@ async function runOnFork(
   const hashes: string[] = [];
   // A gas limit a task chose for the live chain, where the fork had to run with a lower one (see src/gas.ts).
   const liveGasLimits = new Map<string, bigint>();
+  // Sent without a limit of its own: the Hardhat signer fills in the network's default gas.
+  const estimated = new Set<string>();
+  const defaultGas = hre.network.config.gas === 'auto' ? undefined : BigInt(hre.network.config.gas);
   const provider = hre.ethers.provider as unknown as { send: (method: string, params: unknown[]) => Promise<unknown> };
   const send = provider.send.bind(provider);
   provider.send = async (method, params) => {
@@ -226,6 +243,7 @@ async function runOnFork(
     const hash = (await send(method, params)) as string;
     hashes.push(hash);
     if (liveGasLimit !== undefined) liveGasLimits.set(hash, liveGasLimit);
+    if (gas === undefined || BigInt(gas) === defaultGas) estimated.add(hash);
     return hash;
   };
   setRehearsalTarget(forkUrl);
@@ -254,6 +272,7 @@ async function runOnFork(
               { from: plan.deployer, to: plan.deployer, value: '0x0' },
             ])) as string;
             hashes.push(hash);
+            estimated.add(hash);
             logger.log(`  burned nonce ${burned}`, '🔥');
           }
         }
@@ -280,7 +299,17 @@ async function runOnFork(
     const tx = (await hre.network.provider.send('eth_getTransactionByHash', [hash])) as RecordedTx & { nonce: string };
     const liveGasLimit = liveGasLimits.get(hash);
     const gas = liveGasLimit === undefined ? tx.gas : `0x${liveGasLimit.toString(16)}`;
-    recorded.push({ hash, from: tx.from, to: tx.to, input: tx.input, value: tx.value, gas });
+    const receipt = (await hre.network.provider.send('eth_getTransactionReceipt', [hash])) as { gasUsed: string };
+    recorded.push({
+      hash,
+      from: tx.from,
+      to: tx.to,
+      input: tx.input,
+      value: tx.value,
+      gas,
+      estimated: estimated.has(hash),
+      forkGasUsed: receipt.gasUsed,
+    });
   }
   return recorded;
 }
@@ -319,43 +348,34 @@ async function simulateLive(url: string, txs: RecordedTx[]): Promise<void> {
   const startNonce = await provider.getTransactionCount(from, 'latest');
   const gasPrice = (await provider.getFeeData()).gasPrice ?? 0n;
 
-  // One transaction per simulated block, so none is limited by another's gas.
-  const blockStateCalls = txs.map((tx, i) => ({
-    ...(i === 0 ? { stateOverrides: { [from]: { balance: REHEARSAL_BALANCE } } } : {}),
-    calls: [
-      {
-        from: tx.from,
-        ...(tx.to ? { to: tx.to } : {}),
-        input: tx.input,
-        value: tx.value,
-        nonce: `0x${(startNonce + i).toString(16)}`,
-        gas: tx.gas,
-        maxFeePerGas: `0x${(gasPrice * 10n + 10n ** 9n).toString(16)}`,
-        maxPriorityFeePerGas: '0x1',
-      },
-    ],
-  }));
-
-  type SimulatedCall = { status: string; gasUsed: string; error?: { message: string; data?: string } };
-  let result: { number: string; calls: SimulatedCall[] }[];
-  try {
-    result = await provider.send('eth_simulateV1', [{ blockStateCalls, validation: true }, 'latest']);
-  } catch (error) {
-    throw new Error(`eth_simulateV1 failed on the live RPC (pass --skip-simulation to skip): ${error}`);
+  let limits = txs.map((tx) => BigInt(tx.gas));
+  let result = await simulate(provider, txs, limits, startNonce, gasPrice);
+  // Monad charges the gas limit, not the gas used, and its simulation reports the limit as gas used. yarn deploy
+  // sends an estimated transaction with the live estimate, so the fork's default limit would overstate the cost.
+  const chargesLimit = result.every((block, i) => BigInt(block.calls[0].gasUsed) === limits[i]);
+  if (chargesLimit) {
+    logger.log(
+      'This chain charges the gas limit. Estimated transactions are simulated again with the gas the fork used ' +
+        `plus ${ESTIMATE_MARGIN_PERCENT - 100n}% as their limit`,
+      'ℹ️ '
+    );
+    limits = txs.map((tx, i) => (tx.estimated ? (BigInt(tx.forkGasUsed) * ESTIMATE_MARGIN_PERCENT) / 100n : limits[i]));
+    result = await simulate(provider, txs, limits, startNonce, gasPrice);
   }
 
   let failures = 0;
-  let gasUsed = 0n;
+  let gas = 0n;
   logger.log(`Live simulation on top of block ${Number(result[0].number) - 1}`, '');
   result.forEach((block, i) => {
     const call = block.calls[0];
     const used = BigInt(call.gasUsed);
-    const limit = BigInt(txs[i].gas);
-    gasUsed += used;
-    const line = `nonce ${startNonce + i}: ${used} of ${limit} gas (${(
-      (Number(limit - used) / Number(limit)) *
-      100
-    ).toFixed(1)}% headroom)`;
+    const limit = limits[i];
+    gas += used;
+    const line = chargesLimit
+      ? `nonce ${startNonce + i}: ${limit} gas charged, the fork used ${BigInt(txs[i].forkGasUsed)}`
+      : `nonce ${startNonce + i}: ${used} of ${limit} gas (${((Number(limit - used) / Number(limit)) * 100).toFixed(
+          1
+        )}% headroom)`;
     if (call.status === '0x1') {
       logger.success(line);
     } else {
@@ -365,11 +385,47 @@ async function simulateLive(url: string, txs: RecordedTx[]): Promise<void> {
   });
 
   const balance = await provider.getBalance(from);
-  const cost = gasUsed * gasPrice;
+  const cost = gas * gasPrice;
   logger.log(
-    `${gasUsed} gas, ${Number(cost) / 1e18} ETH at the current gas price before any L1 data fee; ` +
+    `${gas} gas, ${Number(cost) / 1e18} ETH at the current gas price before any L1 data fee; ` +
       `deployer holds ${Number(balance) / 1e18} ETH`,
     balance < cost ? '⚠️ ' : '⛽'
   );
   if (failures > 0) throw new Error(`${failures} transactions revert on the live chain`);
+}
+
+type SimulatedBlock = {
+  number: string;
+  calls: { status: string; gasUsed: string; error?: { message: string; data?: string } }[];
+};
+
+async function simulate(
+  provider: JsonRpcProvider,
+  txs: RecordedTx[],
+  limits: bigint[],
+  startNonce: number,
+  gasPrice: bigint
+): Promise<SimulatedBlock[]> {
+  // One transaction per simulated block, so none is limited by another's gas.
+  const blockStateCalls = txs.map((tx, i) => ({
+    ...(i === 0 ? { stateOverrides: { [tx.from]: { balance: REHEARSAL_BALANCE } } } : {}),
+    calls: [
+      {
+        from: tx.from,
+        ...(tx.to ? { to: tx.to } : {}),
+        input: tx.input,
+        value: tx.value,
+        nonce: `0x${(startNonce + i).toString(16)}`,
+        gas: `0x${limits[i].toString(16)}`,
+        maxFeePerGas: `0x${(gasPrice * 10n + 10n ** 9n).toString(16)}`,
+        maxPriorityFeePerGas: '0x1',
+      },
+    ],
+  }));
+
+  try {
+    return await provider.send('eth_simulateV1', [{ blockStateCalls, validation: true }, 'latest']);
+  } catch (error) {
+    throw new Error(`eth_simulateV1 failed on the live RPC (pass --skip-simulation to skip): ${error}`);
+  }
 }

@@ -95,7 +95,7 @@ Networks are defined in the repo. Secrets and the signer come from environment v
 
 The Ledger is only opened to sign. Unlock it and open the Ethereum app before deploying. Contract deployment prompts for blind signing. `yarn test` does not use these accounts. It forks through the in-process Hardhat network.
 
-`addresses/.supported-networks.json` is the list of networks: chain id, block explorer and dRPC name. `sepolia` is chain id 11155111, `base` is 8453 and `ethereum` is 1. To add a chain, add it there and give the per-network constants in `src/constants.ts` (WETH, USDC, constant price feed, sequencer uptime feed) and the Authorizer admin in `tasks/20261013-authorizer/input.ts` a value for it. Chains the verifier does not already know also need an `etherscan.customChains` entry in `hardhat.config.ts`.
+`addresses/.supported-networks.json` is the list of networks: chain id, block explorer and dRPC name. `sepolia` is chain id 11155111, `base` is 8453, `ethereum` is 1 and `monad` is 143. To add a chain, add it there and give the per-network constants in `src/constants.ts` (WETH, USDC, constant price feed, sequencer uptime feed) and the Authorizer admin in `tasks/20261013-authorizer/input.ts` a value for it. Chains the verifier does not already know also need an `etherscan.customChains` entry in `hardhat.config.ts`.
 
 ### `deploy`
 
@@ -126,7 +126,7 @@ It then runs every task in LIVE mode on a fork of `<network>`, with the fork's c
 
 Explorer verification is rehearsed with the key and chain config `yarn deploy` would use (`--key` overrides the key). Before the fork run, it calls each Etherscan endpoint verification needs with harmless requests, so a bad key or a chain outside the API plan fails fast. During the run, each contract's request is prepared but not submitted: trimmed sources, the fork's bytecode matched to the build-info, and encoded constructor arguments. Etherscan only accepts a submission once the bytecode is on the live chain, so that last step happens in `yarn deploy`. Pass `--skip-verification` to skip all of this.
 
-Finally it sends every recorded transaction to the live RPC with `eth_simulateV1`, which executes them with the chain's own client and fork rules. Hardhat's EVM can trail a live chain: it does not know Glamsterdam, for example. Each transaction must succeed within the gas limit it was given. The RPC must support `eth_simulateV1`; otherwise pass `--skip-simulation`. Outputs and transaction hashes written for `<network>` are restored afterwards.
+Finally it sends every recorded transaction to the live RPC with `eth_simulateV1`, which executes them with the chain's own client and fork rules. Hardhat's EVM can trail a live chain: it does not know Glamsterdam, for example. Each transaction must succeed within the gas limit it was given. Some chains, such as Monad, charge the gas limit rather than the gas used, and their simulation reports the limit. The rehearsal then simulates each transaction `yarn deploy` would send with an estimate again, limited to the gas the fork used plus 10%, and reports the cost from those limits. The RPC must support `eth_simulateV1`; otherwise pass `--skip-simulation`. Outputs and transaction hashes written for `<network>` are restored afterwards.
 
 To deploy, follow the printed plan with `yarn deploy`. Reject the Ledger prompt that would sign at a nonce marked `BURN`; outputs are saved per contract, so the rerun resumes. Burn the nonce, then run the same task again:
 
