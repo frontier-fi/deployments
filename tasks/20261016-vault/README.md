@@ -8,6 +8,7 @@ Bytecode for the factory and ProtocolFeeController are from the newer [e1ae7f09]
 
 - [Ethereum addresses](./output/ethereum.json)
 - [Base addresses](./output/base.json)
+- [Monad addresses](./output/monad.json)
 - [Sepolia addresses](./output/sepolia.json)
 - [`VaultFactory` artifact](./artifact/VaultFactory.json)
 - [`ProtocolFeeController` artifact](./artifact/ProtocolFeeController.json)

@@ -10,5 +10,6 @@ Bytecode is from [74d7068f](https://github.com/balancer/balancer-v3-monorepo/com
 
 - [Ethereum addresses](./output/ethereum.json)
 - [Base addresses](./output/base.json)
+- [Monad addresses](./output/monad.json)
 - [Sepolia addresses](./output/sepolia.json)
 - [`BatchRouter` artifact](./artifact/BatchRouter.json)
