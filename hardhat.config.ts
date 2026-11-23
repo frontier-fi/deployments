@@ -14,7 +14,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import { checkArtifact, extractArtifact } from './src/artifact';
 import test from './src/test';
 import { dryRunAll } from './src/dryRun';
-import { rehearse } from './src/rehearse';
+import { checkNonces, rehearse } from './src/rehearse';
 import Task, { TaskMode } from './src/task';
 import { createVerifier } from './src/verifier';
 import logger, { Logger } from './src/logger';
@@ -56,6 +56,7 @@ task('deploy', 'Run deployment task')
 
       const apiKey = args.key ?? etherscanApiKey();
       const verifier = apiKey ? await createVerifier(hre, hre.network.name, apiKey) : undefined;
+      await checkNonces(hre, args.id);
       await new Task(args.id, TaskMode.LIVE, hre.network.name, verifier).run(args);
     }
   );
@@ -320,6 +321,13 @@ export default {
     timeout: 600000,
   },
   etherscan: {
-    customChains: [],
+    // Chains hardhat-verify does not know. With a single key it calls Etherscan's v2 API, so apiURL goes unused.
+    customChains: [
+      {
+        network: 'monad',
+        chainId: 143,
+        urls: { apiURL: 'https://api.etherscan.io/v2/api', browserURL: 'https://monadscan.com' },
+      },
+    ],
   },
 };

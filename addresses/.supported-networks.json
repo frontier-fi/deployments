@@ -13,5 +13,11 @@
     "chainId": 1,
     "block-explorer": "https://etherscan.io",
     "drpc": "ethereum"
+  },
+  "monad": {
+    "chainId": 143,
+    "block-explorer": "https://monadvision.com",
+    "drpc": "monad",
+    "sourcify": "https://sourcify-api-monad.blockvision.org"
   }
 }

@@ -20,20 +20,31 @@ type Job = { isJobCompleted: boolean; contract?: { match: string | null }; error
 
 export default class Sourcify {
   chainId: number;
+  server: string;
+  private supported: Promise<boolean> | undefined;
 
-  constructor(chainId: number) {
+  constructor(chainId: number, server = SOURCIFY_SERVER) {
     this.chainId = chainId;
+    this.server = server;
   }
 
-  async isChainSupported(): Promise<boolean> {
-    const chains = (await (await fetch(`${SOURCIFY_SERVER}/chains`)).json()) as {
-      chainId: number;
-      supported: boolean;
-    }[];
-    return chains.some((chain) => chain.chainId === this.chainId && chain.supported);
+  // The server's host, to tell several Sourcify servers apart in the log.
+  get name(): string {
+    return new URL(this.server).host;
   }
 
+  // Asked once per server; an unreachable server counts as not supporting the chain.
+  isChainSupported(): Promise<boolean> {
+    this.supported ??= fetch(`${this.server}/chains`)
+      .then((response) => response.json() as Promise<{ chainId: number; supported: boolean }[]>)
+      .then((chains) => chains.some((chain) => chain.chainId === this.chainId && chain.supported))
+      .catch(() => false);
+    return this.supported;
+  }
+
+  // Another server has no repository browser, so its link is the API's own lookup.
   contractUrl(address: string): string {
+    if (this.server !== SOURCIFY_SERVER) return `${this.server}/v2/contract/${this.chainId}/${address}`;
     return `https://repo.sourcify.dev/${this.chainId}/${address}`;
   }
 
@@ -41,7 +52,7 @@ export default class Sourcify {
   async verify(address: string, request: SourcifyRequest): Promise<string> {
     let lastError: SourcifyError | undefined;
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      const response = await fetch(`${SOURCIFY_SERVER}/v2/verify/${this.chainId}/${address}`, {
+      const response = await fetch(`${this.server}/v2/verify/${this.chainId}/${address}`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(request),
@@ -66,7 +77,7 @@ export default class Sourcify {
   private async waitForJob(verificationId: string): Promise<Job> {
     const deadline = Date.now() + JOB_TIMEOUT_MS;
     for (;;) {
-      const job = (await (await fetch(`${SOURCIFY_SERVER}/v2/verify/${verificationId}`)).json()) as Job;
+      const job = (await (await fetch(`${this.server}/v2/verify/${verificationId}`)).json()) as Job;
       if (job.isJobCompleted) return job;
       if (Date.now() >= deadline) throw new Error(`Sourcify job ${verificationId} did not finish`);
       await sleep(JOB_POLL_MS);

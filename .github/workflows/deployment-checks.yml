@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        network: [sepolia, base, ethereum]
+        network: [sepolia, base, ethereum, monad]
     steps:
       - uses: actions/checkout@v7
       - name: Check ${{ matrix.network }} deployment addresses
@@ -37,7 +37,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        network: [sepolia, base, ethereum]
+        network: [sepolia, base, ethereum, monad]
     steps:
       - uses: actions/checkout@v7
       - name: Check ${{ matrix.network }} Action IDs
