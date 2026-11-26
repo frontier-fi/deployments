@@ -6,7 +6,7 @@ import { HardhatContext } from 'hardhat/internal/context';
 import { createProvider } from 'hardhat/internal/core/providers/construction';
 
 import { assertForkChainId, useForkChainId } from './forkChain';
-import { setRehearsalTarget, takeLiveGasLimit } from './gas';
+import { setRehearsalTarget, takeEstimatedGasLimit, takeLiveGasLimit } from './gas';
 import { etherscanApiKey, rpcUrl } from './networks';
 import logger, { Logger } from './logger';
 import Task, { NO_VERIFIER_WARNING, TaskMode } from './task';
@@ -23,6 +23,8 @@ type Plan = {
   deployer: string;
   steps: PlanStep[]; // one per nonce; taskId undefined means the nonce is burned
   taskOrder: string[];
+  // Tasks not deployed on the reference yet. They run after taskOrder, at the deployer's next nonces.
+  newTasks: string[];
   // Contracts the deployer created itself. Their address depends only on deployer and nonce, so it must match.
   directlyCreated: Set<string>;
 };
@@ -136,6 +138,7 @@ export async function checkNonces(
   const output = new Task(id, TaskMode.READ_ONLY, reference).output({ ensure: false });
   const hashes = [...new Set(Object.values(output).map((address) => deploymentTxs[address]))].filter(Boolean);
   const nonces = (await Promise.all(hashes.map((hash) => provider.getTransaction(hash)))).map((tx) => tx?.nonce);
+  const deployed = hashes.length > 0;
 
   const network = hre.network.provider;
   const request = network.request.bind(network);
@@ -145,7 +148,8 @@ export async function checkNonces(
       const nonce = Number(
         tx.nonce ?? (await request({ method: 'eth_getTransactionCount', params: [tx.from, 'pending'] }))
       );
-      if (nonces.includes(nonce)) logger.log(`Signing at nonce ${nonce}, as on ${reference}`, '🔢');
+      if (!deployed) logger.log(`Signing at nonce ${nonce}; ${id} is not deployed on ${reference} yet`, '🔢');
+      else if (nonces.includes(nonce)) logger.log(`Signing at nonce ${nonce}, as on ${reference}`, '🔢');
       else logger.warn(`Signing at nonce ${nonce}, which ${id} did not use on ${reference}: reject, then burn it`);
     }
     return request(args);
@@ -200,7 +204,11 @@ async function buildPlan(hre: HardhatRuntimeEnvironment, reference: Network): Pr
     if (step.taskId !== undefined && !taskOrder.includes(step.taskId)) taskOrder.push(step.taskId);
   }
 
-  return { deployer, steps, taskOrder, directlyCreated };
+  const newTasks = Task.getAllTaskIds().filter(
+    (id) => Object.keys(new Task(id, TaskMode.READ_ONLY, reference).output({ ensure: false })).length === 0
+  );
+
+  return { deployer, steps, taskOrder, newTasks, directlyCreated };
 }
 
 function printPlan(plan: Plan, fork: Network): void {
@@ -209,6 +217,9 @@ function printPlan(plan: Plan, fork: Network): void {
     const what =
       step.taskId === undefined ? 'BURN (0-value self-transfer)' : `yarn deploy --id ${step.taskId} --network ${fork}`;
     logger.log(`  nonce ${String(step.nonce).padStart(3)}  ${what}`, '');
+  }
+  for (const id of plan.newTasks) {
+    logger.log(`  then       yarn deploy --id ${id} --network ${fork} (not deployed on the reference yet)`, '');
   }
 }
 
@@ -258,7 +269,8 @@ async function runOnFork(
   const hashes: string[] = [];
   // A gas limit a task chose for the live chain, where the fork had to run with a lower one (see src/gas.ts).
   const liveGasLimits = new Map<string, bigint>();
-  // Sent without a limit of its own: the Hardhat signer fills in the network's default gas.
+  // Estimated live by yarn deploy: sent without a limit of its own (the Hardhat signer fills in the network's default
+  // gas), or with one the task estimated on the fork.
   const estimated = new Set<string>();
   const defaultGas = hre.network.config.gas === 'auto' ? undefined : BigInt(hre.network.config.gas);
   const provider = hre.ethers.provider as unknown as { send: (method: string, params: unknown[]) => Promise<unknown> };
@@ -271,11 +283,13 @@ async function runOnFork(
     if (from.toLowerCase() === plan.deployer.toLowerCase() && burns.has(await nonce())) {
       throw new Error(`${REJECTED} at nonce ${await nonce()}`);
     }
-    const liveGasLimit = takeLiveGasLimit(gas === undefined ? undefined : BigInt(gas));
+    const sentGas = gas === undefined ? undefined : BigInt(gas);
+    const liveGasLimit = takeLiveGasLimit(sentGas);
+    const estimatedByTask = takeEstimatedGasLimit(sentGas);
     const hash = (await send(method, params)) as string;
     hashes.push(hash);
     if (liveGasLimit !== undefined) liveGasLimits.set(hash, liveGasLimit);
-    if (gas === undefined || BigInt(gas) === defaultGas) estimated.add(hash);
+    if (sentGas === undefined || sentGas === defaultGas || estimatedByTask) estimated.add(hash);
     return hash;
   };
   setRehearsalTarget(forkUrl);
@@ -291,7 +305,7 @@ async function runOnFork(
 
   try {
     const from = await hre.ethers.getSigner(plan.deployer);
-    for (const id of plan.taskOrder) {
+    for (const id of [...plan.taskOrder, ...plan.newTasks]) {
       for (;;) {
         try {
           await new Task(id, TaskMode.LIVE, fork, verifier).run({ from });
@@ -310,8 +324,12 @@ async function runOnFork(
         }
       }
 
-      const expected = Math.max(...plan.steps.filter((step) => step.taskId === id).map((step) => step.nonce)) + 1;
       const actual = await nonce();
+      if (plan.newTasks.includes(id)) {
+        logger.success(`${id} done, nonce ${actual}`);
+        continue;
+      }
+      const expected = Math.max(...plan.steps.filter((step) => step.taskId === id).map((step) => step.nonce)) + 1;
       // A task that finished before this rehearsal (all its nonces below the starting one) sends nothing.
       if (expected > startNonce && actual !== expected) {
         throw new Error(`After ${id} the deployer nonce is ${actual}, expected ${expected}`);
@@ -367,6 +385,11 @@ function compareAddresses(plan: Plan, reference: Network, fork: Network): number
       }
     }
   }
+  // Nothing to compare yet: these addresses are what the reference should get too, at the same nonces.
+  for (const id of plan.newTasks) {
+    const actual = new Task(id, TaskMode.READ_ONLY).output({ ensure: false, network: fork });
+    for (const [name, address] of Object.entries(actual)) logger.log(`${id} ${name} ${address} (new)`, '🆕');
+  }
   return mismatches;
 }
 
@@ -393,6 +416,14 @@ async function simulateLive(url: string, txs: RecordedTx[]): Promise<void> {
     );
     limits = txs.map((tx, i) => (tx.estimated ? (BigInt(tx.forkGasUsed) * ESTIMATE_MARGIN_PERCENT) / 100n : limits[i]));
     result = await simulate(provider, txs, limits, startNonce, gasPrice);
+  } else if (txs.some((tx) => tx.estimated)) {
+    // The fork's default limit can be too low live: under Glamsterdam, code deposit is paid from gas above the
+    // 2^24 execution cap, and Hardhat's EVM does not know that. yarn deploy estimates on the live chain instead.
+    logger.log('Estimated transactions are simulated again with the block gas limit as their limit', 'ℹ️ ');
+    const blockGasLimit = (await provider.getBlock('latest'))?.gasLimit;
+    if (blockGasLimit === undefined) throw new Error('Could not read the latest block of the live chain');
+    limits = txs.map((tx, i) => (tx.estimated ? blockGasLimit : limits[i]));
+    result = await simulate(provider, txs, limits, startNonce, gasPrice);
   }
 
   let failures = 0;
@@ -405,6 +436,8 @@ async function simulateLive(url: string, txs: RecordedTx[]): Promise<void> {
     gas += used;
     const line = chargesLimit
       ? `nonce ${startNonce + i}: ${limit} gas charged, the fork used ${BigInt(txs[i].forkGasUsed)}`
+      : txs[i].estimated
+      ? `nonce ${startNonce + i}: ${used} gas, estimated by yarn deploy (the fork used ${BigInt(txs[i].forkGasUsed)})`
       : `nonce ${startNonce + i}: ${used} of ${limit} gas (${((Number(limit - used) / Number(limit)) * 100).toFixed(
           1
         )}% headroom)`;

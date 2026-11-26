@@ -27,6 +27,7 @@ Configured networks:
 | Weighted Pool oracle factory                  | [`20261021-weighted-pool-oracle`](./tasks/20261021-weighted-pool-oracle)             |
 | Stable Pool oracle factory                    | [`20261021-stable-pool-oracle`](./tasks/20261021-stable-pool-oracle)                 |
 | Gyro E-CLP oracle factory                     | [`20261021-gyro-eclp-oracle`](./tasks/20261021-gyro-eclp-oracle)                     |
+| Updatable Rate Provider factory               | [`20261126-updatable-rate-provider`](./tasks/20261126-updatable-rate-provider)       |
 
 ## Scripts
 

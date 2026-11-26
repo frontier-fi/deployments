@@ -224,9 +224,9 @@ export default class Verifier {
     );
 
     const buildInfo = task.buildInfoForContract(name);
-    buildInfo.input = this.trimmedBuildInfoInput(name, buildInfo.input);
-
     const sourceName = findContractSourceName(buildInfo, name);
+    buildInfo.input = this.trimmedBuildInfoInput(sourceName, buildInfo.input);
+
     const fullSourceName = `${sourceName}:${name}`;
 
     const contractInformation = await extractMatchingContractInformation(fullSourceName, buildInfo, deployedBytecode);
@@ -317,9 +317,8 @@ export default class Verifier {
   // Trims the inputs of the build info to only keep imported files, avoiding submitting unnecessary source files for
   // verification (e.g. mocks). This is required because Hardhat compiles entire projects at once, resulting in a single
   // huge build info.
-  private trimmedBuildInfoInput(contractName: string, input: CompilerInput): CompilerInput {
+  private trimmedBuildInfoInput(sourceName: string, input: CompilerInput): CompilerInput {
     // First we find all sources imported from our contract
-    const sourceName = this.getContractSourceName(contractName, input);
     const importedSourceNames = this.getContractImportedSourceNames(
       sourceName,
       input,
