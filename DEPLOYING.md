@@ -57,6 +57,18 @@ The `artifact` folder should have been populated with the created artifacts at t
 
 Hardhat does not generate build information for Vyper contracts - those must be created manually.
 
+### Foundry Compilation
+
+For contracts built with Foundry, generate build information on a clean commit in the contracts repository, copy it into `tasks/<task-id>/build-info`, and convert it into Hardhat's `hh-sol-build-info-1` format:
+
+```bash
+$ forge build --build-info <path/to/Contract.sol>
+$ cp <contracts-repo>/out/build-info/<id>.json tasks/<task-id>/build-info/
+$ yarn foundry2hh --task <task-id>
+```
+
+`foundry2hh` strips Foundry's local path fields (`allowPaths`, `basePath`, `includePaths`) from `input`, recompiles via `solc --standard-json` with Hardhat's `outputSelection` (adding `opcodes` for EDR and the commit hash in `solcLongVersion` for Etherscan/Sourcify), verifies bytecode parity against Foundry's output, writes `tasks/<task-id>/build-info/<md5-id>.json`, and removes the raw Foundry file.
+
 ## Verifying Tasks
 
 There are three things to verify from a task:
