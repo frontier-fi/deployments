@@ -5,10 +5,25 @@ import { EIP1193Provider, HardhatRuntimeEnvironment } from 'hardhat/types';
 // for: Hardhat's EVM keeps the pre-Glamsterdam schedule and rejects a limit above the 2^24 transaction cap.
 let rehearsalTarget: string | undefined;
 let pending: { fork: bigint; live: bigint } | undefined;
+let estimatedOnFork: bigint | undefined;
 
 export function setRehearsalTarget(rpcUrl: string | undefined): void {
   rehearsalTarget = rpcUrl;
   pending = undefined;
+  estimatedOnFork = undefined;
+}
+
+// A limit a task estimated, which yarn deploy estimates on the live chain. In a rehearsal the estimate comes from the
+// fork, whose EVM can price the transaction differently, so the live replay must not hold it to that limit.
+export function noteEstimatedGasLimit(limit: bigint): void {
+  if (rehearsalTarget !== undefined) estimatedOnFork = limit;
+}
+
+// Called for every transaction a rehearsal sends, like takeLiveGasLimit: whether it carries the noted estimate.
+export function takeEstimatedGasLimit(sentGas: bigint | undefined): boolean {
+  const noted = estimatedOnFork;
+  estimatedOnFork = undefined;
+  return noted !== undefined && sentGas === noted;
 }
 
 // Glamsterdam blocks carry a block access list hash. Its schedule charges code deposit from a state-gas reservoir.

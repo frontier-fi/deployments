@@ -1,6 +1,7 @@
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { Contract, TransactionRequest } from 'ethers';
 
+import { noteEstimatedGasLimit } from './gas';
 import logger from './logger';
 import { getSigner } from './signers';
 import { Artifact, Libraries, Param } from './types';
@@ -33,7 +34,11 @@ export async function gasLimitForDeployedCode(factory: Contract, data: string): 
   for (;;) {
     try {
       const gas = await ethers.provider.estimateGas(request);
-      if (gas >= MIN_DEPLOYED_CODE_GAS) return (gas * GAS_LIMIT_BUFFER_PERCENT) / 100n;
+      if (gas >= MIN_DEPLOYED_CODE_GAS) {
+        const limit = (gas * GAS_LIMIT_BUFFER_PERCENT) / 100n;
+        noteEstimatedGasLimit(limit);
+        return limit;
+      }
     } catch (error) {
       const code = await ethers.provider.getCode(to);
       if (code !== '0x') throw error;
